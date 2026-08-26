@@ -6,9 +6,10 @@ import { HistoryPage } from "./pages/History";
 import { LoginPage } from "./pages/Login";
 import { SettingsPage } from "./pages/Settings";
 import { UnitDetailPage } from "./pages/UnitDetail";
+import { UnlockPage } from "./pages/Unlock";
 
 export function App() {
-  const { ready, passwordRequired, sessionToken } = useAuth();
+  const { ready, unlocking, passwordRequired, sessionToken } = useAuth();
 
   if (!ready) {
     return (
@@ -18,12 +19,28 @@ export function App() {
     );
   }
 
+  if (unlocking) {
+    return (
+      <div className="ems-grid flex min-h-svh items-center justify-center text-mist">
+        Unlocking…
+      </div>
+    );
+  }
+
   if (passwordRequired && !sessionToken) {
-    return <LoginPage />;
+    return (
+      <Routes>
+        <Route path="/unlock" element={<UnlockPage />} />
+        <Route path="/unlock/:secret" element={<UnlockPage />} />
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+    );
   }
 
   return (
     <Routes>
+      <Route path="/unlock" element={<Navigate to="/" replace />} />
+      <Route path="/unlock/:secret" element={<Navigate to="/" replace />} />
       <Route element={<Shell />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/history" element={<HistoryPage />} />

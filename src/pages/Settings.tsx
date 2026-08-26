@@ -8,7 +8,7 @@ import { MAP_ZONES, type MapZone } from "../lib/floorplan";
 import type { Id } from "../../convex/_generated/dataModel";
 
 export function SettingsPage() {
-  const { authArgs } = useAuth();
+  const { authArgs, passwordRequired } = useAuth();
   const site = useQuery(api.settings.get, authArgs);
   const units = useQuery(api.units.list, authArgs);
   const updateSite = useMutation(api.settings.update);
@@ -86,6 +86,25 @@ export function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {passwordRequired && (
+          <div className="border border-line bg-panel p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-mist">
+              Guest link
+            </p>
+            <p className="mt-3 text-sm text-mist">
+              A fridge QR or bookmark with the house word unlocks that device
+              for a year. Prefer the hash form so the word stays out of server
+              logs.
+            </p>
+            <p className="mt-3 font-mono text-sm break-all text-paper">
+              {window.location.origin}/#unlock=your-house-word
+            </p>
+            <p className="mt-2 font-mono text-sm break-all text-mist">
+              {window.location.origin}/unlock/your-house-word
+            </p>
+          </div>
+        )}
 
         <div className="border border-line bg-panel p-5">
           <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-mist">

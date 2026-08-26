@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, unlockError } = useAuth();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(unlockError);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -27,7 +27,8 @@ export function LoginPage() {
         </p>
         <h1 className="mt-2 text-2xl">Household access</h1>
         <p className="mt-2 text-sm text-mist">
-          Enter the password set as HOUSEHOLD_PASSWORD on the Convex deployment.
+          Enter the house word, or open a guest link like{" "}
+          <span className="font-mono text-paper">/#unlock=your-word</span>.
         </p>
         <input
           type="password"
@@ -36,7 +37,9 @@ export function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           className="mt-5 w-full border border-line bg-ink px-3 py-2"
         />
-        {error && <p className="mt-2 text-sm text-warn">{error}</p>}
+        {(error ?? unlockError) && (
+          <p className="mt-2 text-sm text-warn">{error ?? unlockError}</p>
+        )}
         <button type="submit" className="mt-4 w-full bg-paper py-2 text-ink">
           Unlock
         </button>

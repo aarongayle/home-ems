@@ -24,15 +24,19 @@ Copy the printed Convex URL into `.env.local`:
 
 ```
 VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
+HOUSEHOLD_PASSWORD=your-house-word
 ```
 
-Optional household lock (set in the Convex dashboard, not in Vite):
+`HOUSEHOLD_PASSWORD` belongs in `.env.local` without a `VITE_` prefix. Vite never sends it to the browser; `pnpm dev:backend` copies it onto the Convex deployment, which is what actually locks the API. If it is unset on Convex, the dashboard is open to anyone who has the deployment URL.
+
+Guests can skip the form with a fridge QR or bookmark:
 
 ```
-HOUSEHOLD_PASSWORD=something-only-you-know
+https://YOUR_DOMAIN/#unlock=your-house-word
+https://YOUR_DOMAIN/unlock/your-house-word
 ```
 
-If that env var is unset, the dashboard is open to anyone who has the deployment URL.
+Prefer the `#unlock=` form so the word is not written to server access logs. After a successful unlock, that device stays signed in for a year. Login attempts are limited to 5 failures per 15 minutes.
 
 ## First run
 

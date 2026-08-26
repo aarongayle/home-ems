@@ -97,6 +97,8 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     filters:
+      # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
+      - offset: -2.5
       - sliding_window_moving_average:
           window_size: 6
           send_every: 1

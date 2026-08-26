@@ -3,7 +3,18 @@ import { householdMutation } from "./lib/auth";
 import { sha256Hex } from "./lib/helpers";
 import type { ClimateMode, HvacAction } from "./lib/types";
 
-const DEMO_UNITS = [
+const DEMO_UNITS: Array<{
+  slug: string;
+  name: string;
+  room: string;
+  mode: ClimateMode;
+  target: number;
+  base: number;
+  outdoor: number;
+  sat?: number;
+  action: HvacAction;
+  hz: number;
+}> = [
   {
     slug: "living-room",
     name: "Living Room",
@@ -12,6 +23,7 @@ const DEMO_UNITS = [
     target: 21,
     base: 21.4,
     outdoor: 2.5,
+    sat: 38.2,
     action: "heating" as HvacAction,
     hz: 34,
   },
@@ -99,6 +111,7 @@ export const demoHome = householdMutation({
         roomTempC: demo.base,
         targetTempC: demo.target,
         outdoorTempC: demo.outdoor,
+        ...(demo.sat !== undefined ? { supplyAirTempC: demo.sat } : {}),
         compressorHz: demo.hz,
         minTempC: 16,
         maxTempC: 31,
@@ -118,6 +131,12 @@ export const demoHome = householdMutation({
           roomTempC: demo.base + swing,
           targetTempC: demo.target,
           outdoorTempC: demo.outdoor + outdoorSwing,
+          ...(demo.sat !== undefined
+            ? {
+                supplyAirTempC:
+                  demo.sat + swing * 1.6 + Math.sin(t * 1.8) * 2,
+              }
+            : {}),
           compressorHz:
             demo.hz === 0 ? 0 : Math.max(0, demo.hz + Math.sin(t) * 8),
           inputPowerW:

@@ -43,11 +43,12 @@ export const temperatureUnitValidator = v.union(
 export const mapZoneValidator = v.union(
   v.literal("ms-1-1"),
   v.literal("ms-1-2"),
-  v.literal("ms-1-3"),
   v.literal("ms-2-1"),
   v.literal("ms-2-2"),
   v.literal("ms-3-1"),
   v.literal("ms-3-2"),
+  v.literal("ms-4-1"),
+  v.literal("ms-4-2"),
 );
 
 export const unitPublicValidator = v.object({
@@ -66,6 +67,7 @@ export const unitPublicValidator = v.object({
   roomTempC: v.optional(v.number()),
   targetTempC: v.optional(v.number()),
   outdoorTempC: v.optional(v.number()),
+  supplyAirTempC: v.optional(v.number()),
   compressorHz: v.optional(v.number()),
   inputPowerW: v.optional(v.number()),
   energyKwh: v.optional(v.number()),
@@ -84,6 +86,7 @@ export const readingValidator = v.object({
   roomTempC: v.optional(v.number()),
   targetTempC: v.optional(v.number()),
   outdoorTempC: v.optional(v.number()),
+  supplyAirTempC: v.optional(v.number()),
   compressorHz: v.optional(v.number()),
   inputPowerW: v.optional(v.number()),
   mode: climateModeValidator,

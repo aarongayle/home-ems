@@ -87,6 +87,10 @@ export function HistoryPage() {
             units.find((unit) => unit._id === activeId),
           )}
           temperatureUnit={site.temperatureUnit}
+          showSat={
+            units.find((unit) => unit._id === activeId)?.supplyAirTempC !==
+            undefined
+          }
         />
       )}
     </div>

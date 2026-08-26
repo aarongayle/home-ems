@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:backend": "convex dev",
+    "dev:backend": "node scripts/sync-household-password.mjs && convex dev",
+    "sync:env": "node scripts/sync-household-password.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint convex && oxlint src",
     "typecheck": "tsc -b && tsc -p convex --noEmit",

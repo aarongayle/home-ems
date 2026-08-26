@@ -296,6 +296,7 @@ export const applyReportedState = internalMutation({
     roomTempC: v.optional(v.number()),
     targetTempC: v.optional(v.number()),
     outdoorTempC: v.optional(v.number()),
+    supplyAirTempC: v.optional(v.number()),
     compressorHz: v.optional(v.number()),
     inputPowerW: v.optional(v.number()),
     energyKwh: v.optional(v.number()),
@@ -335,6 +336,7 @@ export const applyReportedState = internalMutation({
       roomTempC?: number;
       targetTempC?: number;
       outdoorTempC?: number;
+      supplyAirTempC?: number;
       compressorHz?: number;
       inputPowerW?: number;
       energyKwh?: number;
@@ -351,6 +353,9 @@ export const applyReportedState = internalMutation({
     if (args.roomTempC !== undefined) reportedPatch.roomTempC = args.roomTempC;
     if (args.targetTempC !== undefined) reportedPatch.targetTempC = args.targetTempC;
     if (args.outdoorTempC !== undefined) reportedPatch.outdoorTempC = args.outdoorTempC;
+    if (args.supplyAirTempC !== undefined) {
+      reportedPatch.supplyAirTempC = args.supplyAirTempC;
+    }
     if (args.compressorHz !== undefined) reportedPatch.compressorHz = args.compressorHz;
     if (args.inputPowerW !== undefined) reportedPatch.inputPowerW = args.inputPowerW;
     if (args.energyKwh !== undefined) reportedPatch.energyKwh = args.energyKwh;
@@ -370,6 +375,7 @@ export const applyReportedState = internalMutation({
         roomTempC: args.roomTempC,
         targetTempC: args.targetTempC ?? unit.targetTempC,
         outdoorTempC: args.outdoorTempC,
+        supplyAirTempC: args.supplyAirTempC,
         compressorHz: args.compressorHz,
         inputPowerW: args.inputPowerW,
         mode,

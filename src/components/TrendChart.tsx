@@ -21,7 +21,7 @@ import {
 
 const STORAGE_KEY = "home-ems.trend-series";
 
-export type SeriesId = "room" | "target" | "outdoor" | "hz" | "power";
+export type SeriesId = "room" | "target" | "outdoor" | "sat" | "hz" | "power";
 type Scale = "temp" | "hz" | "power";
 
 type SeriesDef = {
@@ -59,6 +59,14 @@ const SERIES: SeriesDef[] = [
     dataKey: "outdoor",
   },
   {
+    id: "sat",
+    label: "SAT",
+    color: "#a88bc4",
+    kind: "line",
+    scale: "temp",
+    dataKey: "sat",
+  },
+  {
     id: "hz",
     label: "Hz",
     color: "#86b56a",
@@ -76,7 +84,7 @@ const SERIES: SeriesDef[] = [
   },
 ];
 
-const DEFAULT_SERIES: SeriesId[] = ["room", "target", "outdoor"];
+const DEFAULT_SERIES: SeriesId[] = ["room", "target", "outdoor", "sat"];
 const SERIES_IDS = new Set<SeriesId>(SERIES.map((item) => item.id));
 
 export type TrendReading = {
@@ -84,6 +92,7 @@ export type TrendReading = {
   roomTempC?: number;
   targetTempC?: number;
   outdoorTempC?: number;
+  supplyAirTempC?: number;
   compressorHz?: number;
   inputPowerW?: number;
   mode: ClimateMode;
@@ -98,6 +107,7 @@ type LiveSource = {
   roomTempC?: number;
   targetTempC?: number;
   outdoorTempC?: number;
+  supplyAirTempC?: number;
   compressorHz?: number;
   inputPowerW?: number;
   mode: ClimateMode;
@@ -121,6 +131,7 @@ export function withLiveReading(
       roomTempC: live.roomTempC,
       targetTempC: live.targetTempC,
       outdoorTempC: live.outdoorTempC,
+      supplyAirTempC: live.supplyAirTempC,
       compressorHz: live.compressorHz,
       inputPowerW: live.inputPowerW,
       mode: live.mode,
@@ -134,6 +145,7 @@ type ChartPoint = {
   room?: number;
   target?: number;
   outdoor?: number;
+  sat?: number;
   hz?: number;
   power?: number;
   mode: ClimateMode;
@@ -233,9 +245,11 @@ function ChartTooltip({
 export function TrendChart({
   readings,
   temperatureUnit,
+  showSat = false,
 }: {
   readings: TrendReading[];
   temperatureUnit: TemperatureUnit;
+  showSat?: boolean;
 }) {
   const [enabled, setEnabled] = useState<SeriesId[]>(loadSeries);
 
@@ -243,9 +257,15 @@ export function TrendChart({
     localStorage.setItem(STORAGE_KEY, JSON.stringify(enabled));
   }, [enabled]);
 
+  const available = useMemo(() => {
+    const hasSat =
+      showSat || readings.some((row) => row.supplyAirTempC !== undefined);
+    return hasSat ? SERIES : SERIES.filter((item) => item.id !== "sat");
+  }, [readings, showSat]);
+
   const selected = useMemo(
-    () => SERIES.filter((item) => enabled.includes(item.id)),
-    [enabled],
+    () => available.filter((item) => enabled.includes(item.id)),
+    [available, enabled],
   );
   const layout = useMemo(() => axisLayout(selected), [selected]);
 
@@ -256,6 +276,7 @@ export function TrendChart({
         room: toDisplay(row.roomTempC, temperatureUnit),
         target: toDisplay(row.targetTempC, temperatureUnit),
         outdoor: toDisplay(row.outdoorTempC, temperatureUnit),
+        sat: toDisplay(row.supplyAirTempC, temperatureUnit),
         hz: row.compressorHz,
         power: row.inputPowerW,
         mode: row.mode,
@@ -301,7 +322,7 @@ export function TrendChart({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1">
-        {SERIES.map((series) => {
+        {available.map((series) => {
           const on = enabled.includes(series.id);
           return (
             <button

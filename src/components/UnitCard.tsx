@@ -26,6 +26,7 @@ export type UnitCardData = {
   hvacAction: HvacAction;
   roomTempC?: number;
   targetTempC?: number;
+  supplyAirTempC?: number;
   compressorHz?: number;
   pendingCommandCount: number;
   minTempC: number;
@@ -93,6 +94,15 @@ export function UnitCard({
             {displayTemp(unit.roomTempC, temperatureUnit, 1)}
             <span className="ml-1 text-lg text-mist">°{temperatureUnit}</span>
           </p>
+          {unit.supplyAirTempC !== undefined && (
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-mist">
+              SAT{" "}
+              <span className="text-sm tracking-normal text-paper">
+                {displayTemp(unit.supplyAirTempC, temperatureUnit, 1)}°
+                {temperatureUnit}
+              </span>
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end">
           <p className="font-mono text-[11px] uppercase tracking-widest text-mist">

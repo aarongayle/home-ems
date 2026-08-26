@@ -10,6 +10,7 @@
       .zone-one { fill: #e2a04a; fill-opacity: .12; stroke: #e2a04a; stroke-opacity: .68; }
       .zone-two { fill: #86b56a; fill-opacity: .12; stroke: #86b56a; stroke-opacity: .68; }
       .zone-three { fill: #5aa7bc; fill-opacity: .12; stroke: #5aa7bc; stroke-opacity: .68; }
+      .zone-four { fill: #a98ad6; fill-opacity: .12; stroke: #a98ad6; stroke-opacity: .68; }
       .zone { stroke-width: 3; stroke-linejoin: round; }
       .code { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 600; letter-spacing: 2px; text-anchor: middle; }
       .room { fill: #8b978c; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 2px; text-anchor: middle; }
@@ -30,8 +31,10 @@
 
   <!-- System 1 -->
   <rect class="zone zone-one" x="499.09" y="100.45" width="142.11" height="159.84"/>
+
+  <!-- System 4 -->
   <polygon
-    class="zone zone-one"
+    class="zone zone-four"
     points="812.37 100.45 641.2 100.45 641.2 157.05 641.2 191.33 641.2 260.29 778.93 260.29 778.93 191.33 812.37 191.33 812.37 100.45"
   />
 
@@ -58,8 +61,8 @@
     <text class="code" x="570.15" y="180" fill="#e2a04a">MS-1-1</text>
     <text class="room" x="570.15" y="201">PRIMARY BEDROOM</text>
 
-    <text class="system" x="710" y="127" fill="#e2a04a">SYSTEM 1</text>
-    <text class="code" x="710" y="180" fill="#e2a04a">MS-1-2</text>
+    <text class="system" x="710" y="127" fill="#a98ad6">SYSTEM 4</text>
+    <text class="code" x="710" y="180" fill="#a98ad6">MS-4-1</text>
     <text class="room" x="710" y="201">PRIMARY BATH</text>
 
     <text class="system" x="455" y="397" fill="#5aa7bc">SYSTEM 3</text>

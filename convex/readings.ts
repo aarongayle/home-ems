@@ -43,6 +43,7 @@ export const forUnit = householdQuery({
       roomTempC: row.roomTempC,
       targetTempC: row.targetTempC,
       outdoorTempC: row.outdoorTempC,
+      supplyAirTempC: row.supplyAirTempC,
       compressorHz: row.compressorHz,
       inputPowerW: row.inputPowerW,
       mode: row.mode,

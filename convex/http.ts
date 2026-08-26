@@ -32,6 +32,8 @@ type IngestBody = {
   target_temp?: unknown;
   target_temperature?: unknown;
   outdoor_temp?: unknown;
+  supply_air_temp?: unknown;
+  sat?: unknown;
   compressor_hz?: unknown;
   compressor_frequency?: unknown;
   input_power?: unknown;
@@ -85,6 +87,7 @@ http.route({
         roomTempC: asFiniteNumber(body.room_temp ?? body.current_temperature),
         targetTempC: asFiniteNumber(body.target_temp ?? body.target_temperature),
         outdoorTempC,
+        supplyAirTempC: asFiniteNumber(body.supply_air_temp ?? body.sat),
         compressorHz: asFiniteNumber(
           body.compressor_hz ?? body.compressor_frequency,
         ),

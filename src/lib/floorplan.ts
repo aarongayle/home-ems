@@ -1,11 +1,12 @@
 export type MapZone =
   | "ms-1-1"
   | "ms-1-2"
-  | "ms-1-3"
   | "ms-2-1"
   | "ms-2-2"
   | "ms-3-1"
-  | "ms-3-2";
+  | "ms-3-2"
+  | "ms-4-1"
+  | "ms-4-2";
 
 export type FloorId = "main" | "upper";
 
@@ -37,8 +38,8 @@ export const MAP_ZONES: ReadonlyArray<FloorplanZone> = [
     y: 20,
   },
   {
-    id: "ms-1-2",
-    label: "MS-1-2",
+    id: "ms-4-1",
+    label: "MS-4-1",
     room: "Primary bath",
     floor: "main",
     x: 60,
@@ -77,22 +78,32 @@ export const MAP_ZONES: ReadonlyArray<FloorplanZone> = [
     y: 51,
   },
   {
-    id: "ms-1-3",
-    label: "MS-1-3",
+    id: "ms-1-2",
+    label: "MS-1-2",
     room: "Theater",
     floor: "upper",
-    x: 55,
-    y: 22,
+    x: 66,
+    y: 24,
+  },
+  {
+    id: "ms-4-2",
+    label: "MS-4-2",
+    room: "Loft & open to family room",
+    floor: "upper",
+    x: 49,
+    y: 69,
   },
 ];
 
 const ALIASES: ReadonlyArray<[MapZone, ReadonlyArray<string>]> = [
   ["ms-2-1", ["mil suite", "mother in law", "mother-in-law", "guest dwelling"]],
   ["ms-1-1", ["primary bedroom", "master bedroom"]],
-  ["ms-1-2", ["primary bath", "master bath"]],
-  ["ms-1-3", ["theater"]],
+  ["ms-1-2", ["theater"]],
   ["ms-2-2", ["study", "office"]],
   ["ms-3-1", ["bedroom 3", "bedroom #3"]],
+  ["ms-4-1", ["primary bath", "master bath"]],
+  // Listed before ms-3-2 so "open to family room" is not claimed by the family room.
+  ["ms-4-2", ["loft", "bonus room", "open to family room"]],
   ["ms-3-2", ["family room", "kitchen", "living room"]],
 ];
 

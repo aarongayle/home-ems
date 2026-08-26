@@ -85,6 +85,7 @@ export function UnitDetailPage() {
         <TrendChart
           readings={withLiveReading(readings, unit)}
           temperatureUnit={site.temperatureUnit}
+          showSat={unit.supplyAirTempC !== undefined}
         />
       )}
     </div>

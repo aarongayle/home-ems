@@ -16,6 +16,11 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
 
+  loginAttempts: defineTable({
+    key: v.string(),
+    failedAt: v.array(v.number()),
+  }).index("by_key", ["key"]),
+
   settings: defineTable({
     key: v.literal("site"),
     homeName: v.string(),
@@ -39,6 +44,7 @@ export default defineSchema({
     roomTempC: v.optional(v.number()),
     targetTempC: v.optional(v.number()),
     outdoorTempC: v.optional(v.number()),
+    supplyAirTempC: v.optional(v.number()),
     compressorHz: v.optional(v.number()),
     inputPowerW: v.optional(v.number()),
     energyKwh: v.optional(v.number()),
@@ -60,6 +66,7 @@ export default defineSchema({
     roomTempC: v.optional(v.number()),
     targetTempC: v.optional(v.number()),
     outdoorTempC: v.optional(v.number()),
+    supplyAirTempC: v.optional(v.number()),
     compressorHz: v.optional(v.number()),
     inputPowerW: v.optional(v.number()),
     mode: climateModeValidator,

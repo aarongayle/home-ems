@@ -1,8 +1,13 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
+import {
+  assertLoginAllowed,
+  clearLoginFailures,
+  recordLoginFailure,
+} from "./lib/auth";
 import { generateToken } from "./lib/helpers";
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const status = query({
   args: {},
@@ -28,15 +33,18 @@ export const login = mutation({
     if (!expected) {
       throw new Error("HOUSEHOLD_PASSWORD is not set on the Convex deployment");
     }
+    await assertLoginAllowed(ctx);
     if (args.password !== expected) {
+      await recordLoginFailure(ctx);
       throw new Error("Invalid password");
     }
+    await clearLoginFailures(ctx);
     const sessionToken = generateToken();
     const now = Date.now();
     await ctx.db.insert("sessions", {
       token: sessionToken,
       createdAt: now,
-      expiresAt: now + THIRTY_DAYS_MS,
+      expiresAt: now + SESSION_TTL_MS,
     });
     return { sessionToken };
   },
