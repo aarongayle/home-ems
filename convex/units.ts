@@ -2,11 +2,13 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { householdMutation, householdQuery } from "./lib/auth";
 import {
+  exceedsDeadband,
   generateToken,
   parseClimateMode,
   parseFanMode,
   parseHvacAction,
   roundHalf,
+  SAT_DEADBAND_C,
   sha256Hex,
   slugify,
   toPublicUnit,
@@ -353,8 +355,18 @@ export const applyReportedState = internalMutation({
     if (args.roomTempC !== undefined) reportedPatch.roomTempC = args.roomTempC;
     if (args.targetTempC !== undefined) reportedPatch.targetTempC = args.targetTempC;
     if (args.outdoorTempC !== undefined) reportedPatch.outdoorTempC = args.outdoorTempC;
-    if (args.supplyAirTempC !== undefined) {
-      reportedPatch.supplyAirTempC = args.supplyAirTempC;
+    const supplyAirTempC = exceedsDeadband(
+      args.supplyAirTempC,
+      unit.supplyAirTempC,
+      SAT_DEADBAND_C,
+    )
+      ? args.supplyAirTempC
+      : unit.supplyAirTempC;
+    if (
+      supplyAirTempC !== undefined &&
+      supplyAirTempC !== unit.supplyAirTempC
+    ) {
+      reportedPatch.supplyAirTempC = supplyAirTempC;
     }
     if (args.compressorHz !== undefined) reportedPatch.compressorHz = args.compressorHz;
     if (args.inputPowerW !== undefined) reportedPatch.inputPowerW = args.inputPowerW;
@@ -375,7 +387,7 @@ export const applyReportedState = internalMutation({
         roomTempC: args.roomTempC,
         targetTempC: args.targetTempC ?? unit.targetTempC,
         outdoorTempC: args.outdoorTempC,
-        supplyAirTempC: args.supplyAirTempC,
+        supplyAirTempC,
         compressorHz: args.compressorHz,
         inputPowerW: args.inputPowerW,
         mode,

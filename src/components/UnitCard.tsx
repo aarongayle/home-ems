@@ -39,9 +39,11 @@ const FANS: FanMode[] = ["auto", "quiet", "low", "medium", "high"];
 export function UnitCard({
   unit,
   temperatureUnit,
+  showTrends = true,
 }: {
   unit: UnitCardData;
   temperatureUnit: TemperatureUnit;
+  showTrends?: boolean;
 }) {
   const { authArgs } = useAuth();
   const setClimate = useMutation(api.units.setClimate);
@@ -177,12 +179,14 @@ export function UnitCard({
               {Math.round(unit.compressorHz)} Hz
             </span>
           )}
-          <Link
-            to={`/unit/${unit._id}`}
-            className="font-mono text-[11px] uppercase tracking-widest text-mist hover:text-paper"
-          >
-            Trends
-          </Link>
+          {showTrends && (
+            <Link
+              to={`/unit/${unit._id}`}
+              className="font-mono text-[11px] uppercase tracking-widest text-mist hover:text-paper"
+            >
+              Trends
+            </Link>
+          )}
         </div>
       </div>
     </section>

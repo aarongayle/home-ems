@@ -41,7 +41,7 @@ Prefer the `#unlock=` form so the word is not written to server access logs. Aft
 ## First run
 
 1. Open the app and either **Load demo home** or add real zones in Settings.
-2. Creating a unit shows a device token once. Put it in `esphome/unit.example.yaml`.
+2. Creating a unit shows a device token once. Copy the generated YAML into ESPHome Device Builder as `<slug>.yaml`.
 3. HTTP ingest URL is `https://YOUR_DEPLOYMENT.convex.site/ingest`.
 4. Flash ESPHome, plug the ESP32 into CN105, confirm the zone goes online.
 
@@ -49,6 +49,7 @@ Demo units cannot be controlled by a real ESP32. Remove them and create units wi
 
 ## ESPHome notes
 
+- Each zone is a self-contained YAML. Settings generates a copy-paste file when you add a unit.
 - Prefer ESP32-S3 over ESP8266 for this firmware.
 - UART is 2400 baud; TX/RX pins depend on the board. See the MitsubishiCN105ESPHome README.
 - `outside_air_temperature_sensor` is not supported on every outdoor unit. Some report -63.5 °C when idle; Home EMS drops that as invalid.

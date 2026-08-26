@@ -1,59 +1,280 @@
+function yamlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function formatOffset(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  return String(value);
+}
+
+const COMMAND_LAMBDA = `                  json::parse_json(body, [](JsonObject root) -> bool {
+                    JsonArray cmds = root["commands"].as<JsonArray>();
+                    if (!cmds) {
+                      return false;
+                    }
+                    for (JsonObject cmd : cmds) {
+                      auto call = id(hp).make_call();
+                      const char *mode = cmd["mode"].as<const char *>();
+                      if (mode) {
+                        if (strcmp(mode, "off") == 0) call.set_mode(climate::CLIMATE_MODE_OFF);
+                        else if (strcmp(mode, "heat") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT);
+                        else if (strcmp(mode, "cool") == 0) call.set_mode(climate::CLIMATE_MODE_COOL);
+                        else if (strcmp(mode, "auto") == 0) call.set_mode(climate::CLIMATE_MODE_AUTO);
+                        else if (strcmp(mode, "dry") == 0) call.set_mode(climate::CLIMATE_MODE_DRY);
+                        else if (strcmp(mode, "fan_only") == 0) call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
+                        else if (strcmp(mode, "heat_cool") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT_COOL);
+                      }
+                      if (!cmd["target_temp"].isNull()) {
+                        call.set_target_temperature(cmd["target_temp"].as<float>());
+                      }
+                      const char *fan = cmd["fan_mode"].as<const char *>();
+                      if (fan) {
+                        if (strcmp(fan, "auto") == 0) call.set_fan_mode(climate::CLIMATE_FAN_AUTO);
+                        else if (strcmp(fan, "quiet") == 0) call.set_fan_mode(climate::CLIMATE_FAN_QUIET);
+                        else if (strcmp(fan, "low") == 0) call.set_fan_mode(climate::CLIMATE_FAN_LOW);
+                        else if (strcmp(fan, "medium") == 0) call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
+                        else if (strcmp(fan, "high") == 0) call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
+                      }
+                      call.perform();
+                    }
+                    return true;
+                  });`;
+
+function satBlock(offset: string): string {
+  return `
+# 10k NTC, B=3590. Voltage divider (DOWNSTREAM):
+#   3.3V -- 10k resistor -- GPIO36 (VP) -- thermistor -- GND
+sensor:
+  - platform: adc
+    id: sat_adc
+    pin: GPIO36
+    attenuation: 12db
+    update_interval: 5s
+    internal: true
+
+  - platform: resistance
+    id: sat_ohm
+    name: Supply Air Temp Resistance
+    sensor: sat_adc
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+    entity_category: diagnostic
+
+  - platform: ntc
+    id: sat
+    name: Supply Air Temp
+    sensor: sat_ohm
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: mdi:thermometer
+    calibration:
+      b_constant: 3590
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    filters:
+      # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
+      - offset: ${offset}
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+      # Hold until SAT moves ±0.3 C from the last published value.
+      - delta: 0.3
+`;
+}
+
+function ingestLambda(includeSat: boolean): string {
+  if (includeSat) {
+    return `            char room[16] = "null";
+            char target[16] = "null";
+            char outdoor[16] = "null";
+            char sat_buf[16] = "null";
+            char hz[16] = "null";
+            char power[16] = "null";
+            if (std::isfinite(id(hp).current_temperature))
+              snprintf(room, sizeof(room), "%.1f", id(hp).current_temperature);
+            if (std::isfinite(id(hp).target_temperature))
+              snprintf(target, sizeof(target), "%.1f", id(hp).target_temperature);
+            if (std::isfinite(id(oat).state))
+              snprintf(outdoor, sizeof(outdoor), "%.1f", id(oat).state);
+            if (std::isfinite(id(sat).state))
+              snprintf(sat_buf, sizeof(sat_buf), "%.1f", id(sat).state);
+            if (std::isfinite(id(comp_hz).state))
+              snprintf(hz, sizeof(hz), "%.0f", id(comp_hz).state);
+            if (std::isfinite(id(input_power).state))
+              snprintf(power, sizeof(power), "%.0f", id(input_power).state);
+            char buf[768];
+            snprintf(
+                buf, sizeof(buf),
+                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"supply_air_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\"}",
+                room, target, outdoor, sat_buf, hz, power,
+                LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
+                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
+            return std::string(buf);`;
+  }
+  return `            char room[16] = "null";
+            char target[16] = "null";
+            char outdoor[16] = "null";
+            char hz[16] = "null";
+            char power[16] = "null";
+            if (std::isfinite(id(hp).current_temperature))
+              snprintf(room, sizeof(room), "%.1f", id(hp).current_temperature);
+            if (std::isfinite(id(hp).target_temperature))
+              snprintf(target, sizeof(target), "%.1f", id(hp).target_temperature);
+            if (std::isfinite(id(oat).state))
+              snprintf(outdoor, sizeof(outdoor), "%.1f", id(oat).state);
+            if (std::isfinite(id(comp_hz).state))
+              snprintf(hz, sizeof(hz), "%.0f", id(comp_hz).state);
+            if (std::isfinite(id(input_power).state))
+              snprintf(power, sizeof(power), "%.0f", id(input_power).state);
+            char buf[768];
+            snprintf(
+                buf, sizeof(buf),
+                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\"}",
+                room, target, outdoor, hz, power,
+                LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
+                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
+            return std::string(buf);`;
+}
+
 export function esphomeSnippet(opts: {
   slug: string;
   name: string;
   convexSiteUrl: string;
   deviceToken: string;
+  includeSat?: boolean;
+  satOffset?: number;
 }): string {
-  return `substitutions:
-  name: ${opts.slug}
-  friendly_name: "${opts.name}"
-  convex_site: ${opts.convexSiteUrl}
-  device_token: "${opts.deviceToken}"
+  const includeSat = opts.includeSat === true;
+  const satOffset = formatOffset(opts.satOffset ?? 0);
 
-# Copy into ESPHome, then add wifi / api / ota secrets.
-# Full annotated example: esphome/unit.example.yaml
+  return `# Save as ${opts.slug}.yaml in ESPHome Device Builder.
+#
+# Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
+# Secrets live in secrets.yaml next to this file.
+
+substitutions:
+  name: ${opts.slug}
+  friendly_name: ${yamlString(opts.name)}
+  convex_site: ${opts.convexSiteUrl}
+  device_token: ${yamlString(opts.deviceToken)}
+
+esphome:
+  name: \${name}
+  friendly_name: \${friendly_name}
 
 esp32:
-  board: esp32-s3-devkitc-1
+  board: esp32dev
   framework:
     type: esp-idf
+
+uart:
+  id: HP_UART
+  baud_rate: 2400
+  parity: EVEN
+  stop_bits: 1
+  data_bits: 8
+  tx_pin: GPIO17
+  rx_pin:
+    number: GPIO16
+    mode:
+      input: true
+      pullup: true
 
 external_components:
   - source: github://echavet/MitsubishiCN105ESPHome
 
-http_request:
-  timeout: 10s
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "\${friendly_name} Fallback"
+    password: !secret fallback_password
 
+captive_portal:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+logger:
+  level: INFO
+
+http_request:
+  id: ems_http
+  timeout: 10s
+  verify_ssl: true
+
+web_server:
+  port: 80
+${includeSat ? satBlock(satOffset) : ""}
 climate:
   - platform: cn105
     id: hp
-    name: \${friendly_name}
+    name: "\${friendly_name}"
+    icon: mdi:heat-pump
     update_interval: 2s
+    remote_temperature_timeout: 30min
+    remote_temperature_keepalive_interval: 20s
+    # Indoor F/C lookup clamps outdoor air to ~31 C. Home EMS converts C/F itself.
+    fahrenheit_compatibility: "disabled"
     outside_air_temperature_sensor:
       id: oat
       name: Outside Air Temp
     compressor_frequency_sensor:
       id: comp_hz
       name: Compressor Frequency
+      entity_category: diagnostic
+    input_power_sensor:
+      id: input_power
+      name: Input Power
+      disabled_by_default: true
+    vertical_vane_select:
+      name: Vertical Vane
+    isee_sensor:
+      name: i-See
+      entity_category: diagnostic
+    stage_sensor:
+      name: Stage
+      entity_category: diagnostic
+    sub_mode_sensor:
+      name: Sub Mode
+      entity_category: diagnostic
+    auto_sub_mode_sensor:
+      name: Auto Sub Mode
+      entity_category: diagnostic
+    functions_sensor:
+      name: Unit Functions
+      entity_category: diagnostic
+    functions_get_button:
+      name: Read Unit Functions
+      entity_category: diagnostic
+    error_code_sensor:
+      name: HVAC Error
+      entity_category: diagnostic
 
 interval:
   - interval: 20s
     then:
       - http_request.post:
           url: \${convex_site}/ingest
-          request_          request_headers:
+          request_headers:
             Content-Type: application/json
             Authorization: Bearer \${device_token}
           body: !lambda |-
-            char buf[768];
-            snprintf(buf, sizeof(buf),
-              "{\\"slug\\":\\"${opts.slug}\\",\\"room_temp\\":%.1f,\\"target_temp\\":%.1f,\\"outdoor_temp\\":%.1f,\\"compressor_hz\\":%.0f,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\"}",
-              id(hp).current_temperature,
-              id(hp).target_temperature,
-              id(oat).state,
-              id(comp_hz).state,
-              LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
-              LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
-            return std::string(buf);
+${ingestLambda(includeSat)}
+
+      - http_request.get:
+          url: \${convex_site}/commands
+          capture_response: true
+          request_headers:
+            Authorization: Bearer \${device_token}
+          on_response:
+            then:
+              - lambda: |-
+${COMMAND_LAMBDA}
 `;
 }

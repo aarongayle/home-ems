@@ -22,17 +22,35 @@ export function SettingsPage() {
   const [homeName, setHomeName] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
+  const [includeSat, setIncludeSat] = useState(false);
+  const [satOffset, setSatOffset] = useState("0");
+  const [copied, setCopied] = useState(false);
   const [issued, setIssued] = useState<{
     unitId: Id<"units">;
     slug: string;
     name: string;
     deviceToken: string;
+    includeSat: boolean;
+    satOffset: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const parsedSatOffset = Number(satOffset);
+  const satOffsetValue = Number.isFinite(parsedSatOffset) ? parsedSatOffset : 0;
 
   const cloudUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
   const siteUrl = cloudUrl ? convexSiteUrl(cloudUrl) : "";
   const session = authArgs === "skip" ? {} : authArgs;
+  const issuedYaml = issued
+    ? esphomeSnippet({
+        slug: issued.slug,
+        name: issued.name,
+        convexSiteUrl: siteUrl,
+        deviceToken: issued.deviceToken,
+        includeSat: issued.includeSat,
+        satOffset: issued.satOffset,
+      })
+    : "";
 
   if (site === undefined || units === undefined) {
     return <p className="text-mist">Loading settings…</p>;
@@ -117,7 +135,13 @@ export function SettingsPage() {
               setError(null);
               void createUnit({ ...session, name, room })
                 .then((result) => {
-                  setIssued({ ...result, name });
+                  setIssued({
+                    ...result,
+                    name,
+                    includeSat,
+                    satOffset: satOffsetValue,
+                  });
+                  setCopied(false);
                   setName("");
                   setRoom("");
                 })
@@ -140,6 +164,53 @@ export function SettingsPage() {
               onChange={(event) => setRoom(event.target.value)}
               className="w-full border border-line bg-ink px-3 py-2"
             />
+            <fieldset>
+              <legend className="text-sm text-mist">
+                Supply air temperature sensor
+              </legend>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  aria-pressed={includeSat}
+                  onClick={() => setIncludeSat(true)}
+                  className={`px-3 py-1.5 text-sm ${
+                    includeSat
+                      ? "bg-paper text-ink"
+                      : "border border-line text-mist"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!includeSat}
+                  onClick={() => setIncludeSat(false)}
+                  className={`px-3 py-1.5 text-sm ${
+                    !includeSat
+                      ? "bg-paper text-ink"
+                      : "border border-line text-mist"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </fieldset>
+            {includeSat && (
+              <label className="block text-sm text-mist">
+                SAT offset (°C)
+                <input
+                  type="number"
+                  step="0.1"
+                  value={satOffset}
+                  onChange={(event) => setSatOffset(event.target.value)}
+                  className="mt-1 w-full border border-line bg-ink px-3 py-2 text-paper"
+                />
+                <span className="mt-1 block text-xs">
+                  ESPHome reading minus a trusted thermometer. Use 0 until you
+                  calibrate.
+                </span>
+              </label>
+            )}
             <button type="submit" className="bg-paper px-4 py-2 text-sm text-ink">
               Create unit
             </button>
@@ -165,15 +236,25 @@ export function SettingsPage() {
             </p>
             <p className="mt-2 font-mono text-sm break-all">{issued.deviceToken}</p>
             <p className="mt-3 text-sm text-mist">
-              Put this in the ESPHome YAML. Ingest URL: {siteUrl}/ingest
+              Save this as{" "}
+              <span className="font-mono text-paper">{issued.slug}.yaml</span>{" "}
+              in ESPHome Device Builder and flash it. Ingest URL: {siteUrl}/ingest
             </p>
-            <pre className="mt-3 max-h-64 overflow-auto bg-ink p-3 font-mono text-[11px] leading-5">
-              {esphomeSnippet({
-                slug: issued.slug,
-                name: issued.name,
-                convexSiteUrl: siteUrl,
-                deviceToken: issued.deviceToken,
-              })}
+            <div className="mt-3 flex items-center justify-end">
+              <button
+                type="button"
+                className="border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-mist hover:text-paper"
+                onClick={() => {
+                  void navigator.clipboard.writeText(issuedYaml).then(() => {
+                    setCopied(true);
+                  });
+                }}
+              >
+                {copied ? "Copied" : "Copy YAML"}
+              </button>
+            </div>
+            <pre className="mt-2 max-h-80 overflow-auto bg-ink p-3 font-mono text-[11px] leading-5">
+              {issuedYaml}
             </pre>
           </div>
         )}
@@ -272,7 +353,10 @@ export function SettingsPage() {
                       slug: unit.slug,
                       name: unit.name,
                       deviceToken: result.deviceToken,
+                      includeSat: unit.supplyAirTempC !== undefined,
+                      satOffset: 0,
                     });
+                    setCopied(false);
                   });
                 }}
               >

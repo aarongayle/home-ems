@@ -1,95 +1,178 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1194.13 922.74" role="img" aria-labelledby="title description">
-  <title id="title">Main floor climate zones</title>
-  <desc id="description">Simplified main floor plan based on traced exterior walls and six HVAC zone boundaries.</desc>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 980 855">
+  <!-- Generator: Adobe Illustrator 30.7.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 114)  -->
   <defs>
-    <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
-      <path d="M46 0H0V46" fill="none" stroke="#e7eee6" stroke-opacity=".025"/>
-    </pattern>
     <style>
-      .shell { fill: #151b16; stroke: #4a5a4d; stroke-width: 5; stroke-linejoin: round; }
-      .zone-one { fill: #e2a04a; fill-opacity: .12; stroke: #e2a04a; stroke-opacity: .68; }
-      .zone-two { fill: #86b56a; fill-opacity: .12; stroke: #86b56a; stroke-opacity: .68; }
-      .zone-three { fill: #5aa7bc; fill-opacity: .12; stroke: #5aa7bc; stroke-opacity: .68; }
-      .zone-four { fill: #a98ad6; fill-opacity: .12; stroke: #a98ad6; stroke-opacity: .68; }
-      .zone { stroke-width: 3; stroke-linejoin: round; }
-      .code { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 600; letter-spacing: 2px; text-anchor: middle; }
-      .room { fill: #8b978c; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 2px; text-anchor: middle; }
-      .detail { fill: #59665b; font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 1.6px; text-anchor: middle; }
-      .system { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 2px; text-anchor: middle; }
+      .st0, .st1, .st2, .st3, .st4 {
+        fill: none;
+      }
+
+      .st5 {
+        fill: url(#grid);
+      }
+
+      .st6 {
+        fill: #151b16;
+      }
+
+      .st6, .st7, .st8, .st9, .st10 {
+        stroke-linejoin: round;
+      }
+
+      .st6, .st3 {
+        stroke: #4a5a4d;
+        stroke-width: 5px;
+      }
+
+      .st1 {
+        stroke: #344239;
+        stroke-dasharray: 9 9;
+      }
+
+      .st1, .st4 {
+        stroke-width: 2px;
+      }
+
+      .st7 {
+        stroke: #5aa7bc;
+      }
+
+      .st7, .st8, .st9, .st10 {
+        fill-opacity: .12;
+        stroke-opacity: .68;
+        stroke-width: 3px;
+      }
+
+      .st7, .st11, .st12 {
+        fill: #5aa7bc;
+      }
+
+      .st8 {
+        stroke: #e2a04a;
+      }
+
+      .st8, .st13, .st14 {
+        fill: #e2a04a;
+      }
+
+      .st13, .st14, .st15, .st16, .st11, .st17, .st18, .st19, .st20, .st12 {
+        isolation: isolate;
+      }
+
+      .st13, .st11, .st17, .st19 {
+        font-family: CourierNewPS-BoldMT, 'Courier New';
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: .1em;
+      }
+
+      .st2 {
+        opacity: .03;
+        stroke: #e7eee6;
+      }
+
+      .st3 {
+        stroke-linecap: square;
+      }
+
+      .st4 {
+        stroke: #8b978c;
+      }
+
+      .st14, .st15, .st16, .st18, .st20, .st12 {
+        font-family: CourierNewPSMT, 'Courier New';
+      }
+
+      .st14, .st15, .st16, .st20, .st12 {
+        font-size: 10px;
+      }
+
+      .st14, .st16, .st20, .st12 {
+        letter-spacing: .2em;
+      }
+
+      .st15 {
+        fill: #59665b;
+        letter-spacing: .16em;
+      }
+
+      .st21 {
+        fill: #0d110e;
+      }
+
+      .st16, .st9, .st17 {
+        fill: #a98ad6;
+      }
+
+      .st9 {
+        stroke: #a98ad6;
+      }
+
+      .st22 {
+        opacity: .72;
+      }
+
+      .st10 {
+        stroke: #86b56a;
+      }
+
+      .st10, .st19, .st20 {
+        fill: #86b56a;
+      }
+
+      .st18 {
+        fill: #8b978c;
+        font-size: 12px;
+        letter-spacing: .17em;
+      }
     </style>
+    <pattern id="grid" x="0" y="0" width="36" height="36" patternTransform="translate(14 -15353) scale(1 -1)" patternUnits="userSpaceOnUse" viewBox="0 0 36 36">
+      <g>
+        <rect class="st0" width="36" height="36"/>
+        <polyline class="st2" points="36 36 0 36 0 0"/>
+      </g>
+    </pattern>
   </defs>
-
-  <rect width="1194.13" height="922.74" fill="#0d110e"/>
-  <rect width="1194.13" height="922.74" fill="url(#grid)"/>
-
-  <!-- Exterior walls from the supplied trace -->
-  <polygon
-    class="shell"
-    points="1036.76 100.45 499.09 100.45 499.09 279.67 499.09 335.04 499.09 367.1 174.15 367.1 174.15 595.87 187.26 595.87 187.26 731.38 324.23 731.38 324.23 687.67 499.09 687.67 499.09 731.38 625.86 731.38 625.86 520.1 660.83 520.1 660.83 335.04 1036.76 335.04 1036.76 100.45"
-  />
-  <rect class="shell" x="812.37" y="566.73" width="193.8" height="271.02"/>
-
-  <!-- System 1 -->
-  <rect class="zone zone-one" x="499.09" y="100.45" width="142.11" height="159.84"/>
-
-  <!-- System 4 -->
-  <polygon
-    class="zone zone-four"
-    points="812.37 100.45 641.2 100.45 641.2 157.05 641.2 191.33 641.2 260.29 778.93 260.29 778.93 191.33 812.37 191.33 812.37 100.45"
-  />
-
-  <!-- System 2 -->
-  <rect class="zone zone-two" x="812.37" y="566.73" width="193.8" height="271.02"/>
-  <polygon
-    class="zone zone-two"
-    points="505.15 618.11 505.15 687.06 499.09 687.06 499.09 731.38 505.15 731.38 524.72 731.38 625.86 731.38 625.86 618.11 505.15 618.11"
-  />
-
-  <!-- System 3 -->
-  <polygon
-    class="zone zone-three"
-    points="625.86 260.29 499.09 260.29 499.09 367.1 318.79 367.1 318.79 687.06 505.15 687.06 505.15 557.54 625.86 557.54 625.86 260.29"
-  />
-  <polygon
-    class="zone zone-three"
-    points="318.79 687.06 318.79 595.74 318.79 367.1 174.15 367.1 174.15 595.74 187.26 595.74 187.26 731.38 310.6 731.38 318.79 731.38 324.23 731.38 324.23 687.06 318.79 687.06"
-  />
-
-  <!-- Zone labels -->
+  <rect class="st21" width="980" height="855"/>
+  <rect class="st5" width="980" height="855"/>
+  <polygon class="st6" points="921.76 58.45 384.09 58.45 384.09 325.1 59.15 325.1 59.15 553.87 72.26 553.87 72.26 689.38 209.23 689.38 209.23 645.67 384.09 645.67 384.09 689.38 510.86 689.38 510.86 478.1 545.83 478.1 545.83 293.04 921.76 293.04 921.76 58.45"/>
+  <rect class="st6" x="697.37" y="524.73" width="193.8" height="271.02"/>
+  <path class="st3" d="M526.2,58.45v159.84M384.09,218.29h279.84M663.93,218.29v-68.96h33.44M697.37,58.45v234.59M510.86,218.29v297.25M390.15,515.54h120.71M390.15,515.54v129.52M203.79,645.06h186.36M203.79,325.1v319.96M390.15,576.11h120.71"/>
+  <path class="st1" d="M711,72h197v207h-197V72Z"/>
+  <text class="st18" transform="translate(781.4 170)"><tspan x="0" y="0">GARAGE</tspan></text>
+  <text class="st15" transform="translate(759.59 192)"><tspan x="0" y="0">UNCONDITIONED</tspan></text>
+  <text class="st18" transform="translate(571.8 260)"><tspan x="0" y="0">UTILITY</tspan></text>
+  <rect class="st8" x="391.09" y="65.45" width="128.11" height="145.84"/>
+  <polygon class="st9" points="690.37 65.45 533.2 65.45 533.2 211.29 656.93 211.29 656.93 142.33 690.37 142.33 690.37 65.45"/>
+  <polygon class="st7" points="503.86 225.29 391.09 225.29 391.09 332.1 210.79 332.1 210.79 638.06 383.15 638.06 383.15 508.54 503.86 508.54 503.86 225.29"/>
+  <polygon class="st7" points="66.15 332.1 196.79 332.1 196.79 682.38 79.26 682.38 79.26 546.74 66.15 546.74 66.15 332.1"/>
+  <rect class="st10" x="397.15" y="583.11" width="106.71" height="99.27"/>
+  <rect class="st10" x="704.37" y="531.73" width="179.8" height="257.02"/>
   <g>
-    <text class="system" x="570.15" y="127" fill="#e2a04a">SYSTEM 1</text>
-    <text class="code" x="570.15" y="180" fill="#e2a04a">MS-1-1</text>
-    <text class="room" x="570.15" y="201">PRIMARY BEDROOM</text>
-
-    <text class="system" x="710" y="127" fill="#a98ad6">SYSTEM 4</text>
-    <text class="code" x="710" y="180" fill="#a98ad6">MS-4-1</text>
-    <text class="room" x="710" y="201">PRIMARY BATH</text>
-
-    <text class="system" x="455" y="397" fill="#5aa7bc">SYSTEM 3</text>
-    <text class="code" x="455" y="472" fill="#5aa7bc">MS-3-2</text>
-    <text class="room" x="455" y="494">FAMILY / KITCHEN</text>
-
-    <text class="system" x="245" y="397" fill="#5aa7bc">SYSTEM 3</text>
-    <text class="code" x="245" y="510" fill="#5aa7bc">MS-3-1</text>
-    <text class="room" x="245" y="532">BEDROOM WING</text>
-
-    <text class="system" x="565" y="642" fill="#86b56a">SYSTEM 2</text>
-    <text class="code" x="565" y="684" fill="#86b56a">MS-2-2</text>
-    <text class="room" x="565" y="705">STUDY</text>
-
-    <text class="system" x="909.27" y="598" fill="#86b56a">SYSTEM 2</text>
-    <text class="code" x="909.27" y="700" fill="#86b56a">MS-2-1</text>
-    <text class="room" x="909.27" y="722">GUEST DWELLING</text>
+    <text class="st14" transform="translate(423 92)"><tspan x="0" y="0">SYSTEM 1</tspan></text>
+    <text class="st13" transform="translate(411.19 143)"><tspan x="0" y="0">MS-1-1</tspan></text>
+    <text class="st18" transform="translate(422.8 167)"><tspan x="0" y="0">PRIMARY</tspan></text>
+    <text class="st18" transform="translate(422.8 185)"><tspan x="0" y="0">BEDROOM</tspan></text>
+    <text class="st16" transform="translate(566 92)"><tspan x="0" y="0">SYSTEM 4</tspan></text>
+    <text class="st17" transform="translate(554.19 143)"><tspan x="0" y="0">MS-4-1</tspan></text>
+    <text class="st18" transform="translate(565.8 167)"><tspan x="0" y="0">PRIMARY</tspan></text>
+    <text class="st18" transform="translate(579.6 185)"><tspan x="0" y="0">BATH</tspan></text>
+    <text class="st12" transform="translate(331 378)"><tspan x="0" y="0">SYSTEM 3</tspan></text>
+    <text class="st11" transform="translate(319.19 430)"><tspan x="0" y="0">MS-3-2</tspan></text>
+    <text class="st18" transform="translate(289.39 454)"><tspan x="0" y="0">FAMILY / KITCHEN</tspan></text>
+    <text class="st12" transform="translate(101 414)"><tspan x="0" y="0">SYSTEM 3</tspan></text>
+    <text class="st11" transform="translate(89.19 466)"><tspan x="0" y="0">MS-3-1</tspan></text>
+    <text class="st18" transform="translate(77.79 490)"><tspan x="0" y="0">BEDROOM WING</tspan></text>
+    <text class="st20" transform="translate(416 609)"><tspan x="0" y="0">SYSTEM 2</tspan></text>
+    <text class="st19" transform="translate(404.19 641)"><tspan x="0" y="0">MS-2-2</tspan></text>
+    <text class="st18" transform="translate(425 665)"><tspan x="0" y="0">STUDY</tspan></text>
+    <text class="st20" transform="translate(762 606)"><tspan x="0" y="0">SYSTEM 2</tspan></text>
+    <text class="st19" transform="translate(750.19 658)"><tspan x="0" y="0">MS-2-1</tspan></text>
+    <text class="st18" transform="translate(729.59 682)"><tspan x="0" y="0">GUEST DWELLING</tspan></text>
+    <text class="st15" transform="translate(763.6 704)"><tspan x="0" y="0">DETACHED</tspan></text>
   </g>
-
-  <!-- Unconditioned and circulation areas -->
-  <text class="room" x="900" y="225">GARAGE</text>
-  <text class="detail" x="900" y="245">UNCONDITIONED</text>
-  <text class="room" x="698" y="310">UTILITY</text>
-  <text class="detail" x="648" y="618" transform="rotate(-90 648 618)">CIRCULATION</text>
-
-  <g transform="translate(112 782)" opacity=".72">
-    <path d="M0 21V0M0 0l-7 10M0 0l7 10" stroke="#8b978c" stroke-width="2" fill="none"/>
-    <text x="0" y="38" class="detail">N</text>
+  <g class="st22">
+    <path class="st4" d="M27,749v-21M27,728l-7,10M27,728l7,10"/>
+    <text class="st15" transform="translate(23.2 766)"><tspan x="0" y="0">N</tspan></text>
   </g>
 </svg>

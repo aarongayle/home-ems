@@ -1,12 +1,8 @@
-# Home EMS example ESPHome config
+# Mother-in-Law's Suite mini split.
 #
 # Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
-# Board: 30-pin ESP-WROOM-32 DevKitC (not ESP32-S3). Wire UART to CN105
-# at 2400 baud. Secrets live in esphome/secrets.yaml.
-#
-# This file posts live state to Home EMS and polls for setpoint/mode
-# commands. Keep the ESPHome web_server so the unit still works locally
-# if the internet is down.
+# Board: 30-pin ESP-WROOM-32 DevKitC (not ESP32-S3). SAT NTC on GPIO36 (VP).
+# Secrets live in esphome/secrets.yaml.
 
 substitutions:
   name: mil-suite
@@ -104,10 +100,12 @@ sensor:
       reference_resistance: 10kOhm
     filters:
       # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
-      - offset: -2.5
+      - offset: 4
       - sliding_window_moving_average:
           window_size: 6
           send_every: 1
+      # Hold until SAT moves ±0.3 C from the last published value.
+      - delta: 0.3
 
 climate:
   - platform: cn105

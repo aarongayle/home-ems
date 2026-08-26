@@ -1,14 +1,14 @@
-# Copy this file for a new zone, then set name / token.
-# Settings → Add unit also generates this YAML for copy-paste into Device Builder.
+# Office mini split.
 #
 # Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
+# Board: 30-pin ESP-WROOM-32. SAT NTC on GPIO36 (VP).
 # Secrets live in esphome/secrets.yaml.
 
 substitutions:
-  name: living-room
-  friendly_name: Living Room
+  name: office
+  friendly_name: Office
   convex_site: https://wary-tern-102.convex.site
-  device_token: "paste-token-from-settings"
+  device_token: "91dd72ff341195f4d4b166e32e4cc66e4952576ad9fb0db4"
 
 esphome:
   name: ${name}
@@ -62,6 +62,44 @@ http_request:
 
 web_server:
   port: 80
+
+# 10k NTC, B=3590. Voltage divider (DOWNSTREAM):
+#   3.3V -- 10k resistor -- GPIO36 (VP) -- thermistor -- GND
+sensor:
+  - platform: adc
+    id: sat_adc
+    pin: GPIO36
+    attenuation: 12db
+    update_interval: 5s
+    internal: true
+
+  - platform: resistance
+    id: sat_ohm
+    name: Supply Air Temp Resistance
+    sensor: sat_adc
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+    entity_category: diagnostic
+
+  - platform: ntc
+    id: sat
+    name: Supply Air Temp
+    sensor: sat_ohm
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: mdi:thermometer
+    calibration:
+      b_constant: 3590
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    filters:
+      # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
+      - offset: 3
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+      # Hold until SAT moves ±0.3 C from the last published value.
+      - delta: 0.3
 
 climate:
   - platform: cn105
@@ -120,6 +158,7 @@ interval:
             char room[16] = "null";
             char target[16] = "null";
             char outdoor[16] = "null";
+            char sat_buf[16] = "null";
             char hz[16] = "null";
             char power[16] = "null";
             if (std::isfinite(id(hp).current_temperature))
@@ -128,6 +167,8 @@ interval:
               snprintf(target, sizeof(target), "%.1f", id(hp).target_temperature);
             if (std::isfinite(id(oat).state))
               snprintf(outdoor, sizeof(outdoor), "%.1f", id(oat).state);
+            if (std::isfinite(id(sat).state))
+              snprintf(sat_buf, sizeof(sat_buf), "%.1f", id(sat).state);
             if (std::isfinite(id(comp_hz).state))
               snprintf(hz, sizeof(hz), "%.0f", id(comp_hz).state);
             if (std::isfinite(id(input_power).state))
@@ -135,8 +176,8 @@ interval:
             char buf[768];
             snprintf(
                 buf, sizeof(buf),
-                "{\"room_temp\":%s,\"target_temp\":%s,\"outdoor_temp\":%s,\"compressor_hz\":%s,\"input_power\":%s,\"mode\":\"%s\",\"hvac_action\":\"%s\"}",
-                room, target, outdoor, hz, power,
+                "{\"room_temp\":%s,\"target_temp\":%s,\"outdoor_temp\":%s,\"supply_air_temp\":%s,\"compressor_hz\":%s,\"input_power\":%s,\"mode\":\"%s\",\"hvac_action\":\"%s\"}",
+                room, target, outdoor, sat_buf, hz, power,
                 LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
                 LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
             return std::string(buf);

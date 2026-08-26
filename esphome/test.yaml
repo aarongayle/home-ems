@@ -1,16 +1,11 @@
-# Home EMS example ESPHome config
+# Bench unit. Extra NTC is local-only (not posted to Home EMS).
 #
 # Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
-# Board: ESP32-S3 recommended. Wire UART to the indoor unit CN105 port
-# at 2400 baud 8E1 as described in that repo.
-#
-# This file posts live state to Home EMS and polls for setpoint/mode
-# commands. Keep the ESPHome web_server so the unit still works locally
-# if the internet is down.
+# Secrets live in esphome/secrets.yaml.
 
 substitutions:
   name: test
-  friendly_name: "test"
+  friendly_name: test
   convex_site: https://wary-tern-102.convex.site
   device_token: "1462d5f5bde5003b2dbef7f4ddb1f0726237f22d2c53219c"
 

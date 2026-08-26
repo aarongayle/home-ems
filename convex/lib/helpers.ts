@@ -55,6 +55,23 @@ export function sanitizeOutdoorTempC(value: number | undefined): number | undefi
   return value;
 }
 
+/** Hold SAT until it moves at least this far from the last written value. */
+export const SAT_DEADBAND_C = 0.3;
+
+export function exceedsDeadband(
+  next: number | undefined,
+  previous: number | undefined,
+  deadband: number,
+): next is number {
+  if (next === undefined) {
+    return false;
+  }
+  if (previous === undefined) {
+    return true;
+  }
+  return Math.abs(next - previous) >= deadband;
+}
+
 const CLIMATE_MODES: ReadonlyArray<ClimateMode> = [
   "off",
   "auto",

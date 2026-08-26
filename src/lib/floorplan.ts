@@ -8,6 +8,18 @@ export type MapZone =
   | "ms-4-1"
   | "ms-4-2";
 
+export type CondenserId = "ms-1" | "ms-2" | "ms-3" | "ms-4";
+
+export const CONDENSERS: ReadonlyArray<{
+  id: CondenserId;
+  label: string;
+}> = [
+  { id: "ms-1", label: "MS-1" },
+  { id: "ms-2", label: "MS-2" },
+  { id: "ms-3", label: "MS-3" },
+  { id: "ms-4", label: "MS-4" },
+];
+
 export type FloorId = "main" | "upper";
 
 export type FloorplanZone = {
@@ -34,48 +46,48 @@ export const MAP_ZONES: ReadonlyArray<FloorplanZone> = [
     label: "MS-1-1",
     room: "Primary bedroom",
     floor: "main",
-    x: 48,
-    y: 20,
+    x: 46,
+    y: 17,
   },
   {
     id: "ms-4-1",
     label: "MS-4-1",
     room: "Primary bath",
     floor: "main",
-    x: 60,
-    y: 20,
+    x: 61,
+    y: 17,
   },
   {
     id: "ms-2-1",
     label: "MS-2-1",
     room: "Guest dwelling",
     floor: "main",
-    x: 76,
-    y: 76,
+    x: 81,
+    y: 77,
   },
   {
     id: "ms-2-2",
     label: "MS-2-2",
     room: "Study",
     floor: "main",
-    x: 47,
-    y: 74,
+    x: 46,
+    y: 75,
   },
   {
     id: "ms-3-1",
     label: "MS-3-1",
     room: "Bedroom 3",
     floor: "main",
-    x: 21,
-    y: 55,
+    x: 14,
+    y: 54,
   },
   {
     id: "ms-3-2",
     label: "MS-3-2",
     room: "Family room",
     floor: "main",
-    x: 40,
-    y: 51,
+    x: 37,
+    y: 50,
   },
   {
     id: "ms-1-2",
@@ -124,4 +136,84 @@ export function inferMapZone(unit: {
   return ALIASES.find(([, aliases]) =>
     aliases.some((alias) => source.includes(alias)),
   )?.[0];
+}
+
+export function condenserFromZone(zone: MapZone): CondenserId {
+  return zone.replace(/-\d+$/, "") as CondenserId;
+}
+
+export type CondenserGroup<T> = {
+  key: string;
+  label: string;
+  condenserId?: CondenserId;
+  units: T[];
+};
+
+type ZoneUnit = {
+  _id: string;
+  slug: string;
+  name: string;
+  room: string;
+  mapZone?: MapZone;
+};
+
+function zoneForUnit(unit: ZoneUnit): MapZone | undefined {
+  return unit.mapZone ?? inferMapZone(unit);
+}
+
+function zoneSortKey(unit: ZoneUnit): string {
+  return zoneForUnit(unit) ?? unit.name;
+}
+
+export function groupUnitsByCondenser<T extends ZoneUnit>(
+  units: ReadonlyArray<T>,
+): CondenserGroup<T>[] {
+  const buckets = new Map<string, CondenserGroup<T>>();
+
+  for (const unit of units) {
+    const zone = zoneForUnit(unit);
+    if (zone) {
+      const condenserId = condenserFromZone(zone);
+      const existing = buckets.get(condenserId);
+      if (existing) {
+        existing.units.push(unit);
+      } else {
+        const meta = CONDENSERS.find((item) => item.id === condenserId);
+        buckets.set(condenserId, {
+          key: condenserId,
+          label: meta?.label ?? condenserId.toUpperCase(),
+          condenserId,
+          units: [unit],
+        });
+      }
+    } else {
+      buckets.set(unit._id, {
+        key: unit._id,
+        label: unit.name,
+        units: [unit],
+      });
+    }
+  }
+
+  for (const group of buckets.values()) {
+    group.units.sort((a, b) => zoneSortKey(a).localeCompare(zoneSortKey(b)));
+  }
+
+  return [...buckets.values()].sort((a, b) => {
+    if (a.condenserId && b.condenserId) {
+      return a.condenserId.localeCompare(b.condenserId);
+    }
+    if (a.condenserId) return -1;
+    if (b.condenserId) return 1;
+    return a.label.localeCompare(b.label);
+  });
+}
+
+export function groupForUnit<T extends ZoneUnit>(
+  units: ReadonlyArray<T>,
+  unitId: string,
+): CondenserGroup<T> | undefined {
+  return groupUnitsByCondenser(units).find((group) =>
+    group.units.some((unit) => unit._id === unitId),
+  );
 }

@@ -1,179 +1,80 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 1000 933">
-  <!-- Generator: Adobe Illustrator 30.7.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 114)  -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 933" role="img" aria-labelledby="title description">
+  <title id="title">Upper floor climate zones</title>
+  <desc id="description">Upper floor plan traced from the architectural drawing: theater on system 1, loft and the open volume above the family room on system 4.</desc>
   <defs>
-    <style>
-      .st0, .st1, .st2, .st3, .st4, .st5, .st6, .st7, .st8 {
-        fill: none;
-      }
-
-      .st9 {
-        fill: url(#grid);
-      }
-
-      .st10 {
-        font-size: 8px;
-        letter-spacing: .05em;
-      }
-
-      .st10, .st11, .st6, .st12, .st13, .st14, .st15, .st16 {
-        isolation: isolate;
-      }
-
-      .st10, .st12, .st13, .st14, .st16 {
-        font-family: CourierNewPSMT, 'Courier New';
-      }
-
-      .st10, .st13 {
-        fill: #59665b;
-      }
-
-      .st17 {
-        fill: #151b16;
-      }
-
-      .st17, .st18, .st19 {
-        stroke-linejoin: round;
-      }
-
-      .st17, .st3 {
-        stroke: #4a5a4d;
-      }
-
-      .st17, .st3, .st8 {
-        stroke-width: 5px;
-      }
-
-      .st1 {
-        stroke-dasharray: 9 9;
-      }
-
-      .st1, .st4, .st5, .st6, .st7 {
-        stroke-width: 2px;
-      }
-
-      .st1, .st6, .st7 {
-        stroke: #344239;
-      }
-
-      .st18 {
-        stroke: #e2a04a;
-      }
-
-      .st18, .st11, .st12 {
-        fill: #e2a04a;
-      }
-
-      .st18, .st19 {
-        fill-opacity: .12;
-        stroke-opacity: .68;
-        stroke-width: 3px;
-      }
-
-      .st11, .st15 {
-        font-family: CourierNewPS-BoldMT, 'Courier New';
-        font-size: 21px;
-        font-weight: 700;
-        letter-spacing: .1em;
-      }
-
-      .st2 {
-        opacity: .03;
-        stroke: #e7eee6;
-      }
-
-      .st3 {
-        stroke-linecap: square;
-      }
-
-      .st4, .st8 {
-        stroke: #8b978c;
-      }
-
-      .st5 {
-        stroke: #59665b;
-      }
-
-      .st6 {
-        opacity: .8;
-      }
-
-      .st12, .st13, .st14 {
-        font-size: 10px;
-      }
-
-      .st12, .st14 {
-        letter-spacing: .2em;
-      }
-
-      .st13 {
-        letter-spacing: .16em;
-      }
-
-      .st20 {
-        fill: #0d110e;
-      }
-
-      .st14, .st19, .st15 {
-        fill: #a98ad6;
-      }
-
-      .st19 {
-        stroke: #a98ad6;
-      }
-
-      .st21 {
-        opacity: .72;
-      }
-
-      .st8 {
-        stroke-opacity: .55;
-      }
-
-      .st16 {
-        fill: #8b978c;
-        font-size: 12px;
-        letter-spacing: .17em;
-      }
-    </style>
-    <pattern id="grid" x="0" y="0" width="36" height="36" patternTransform="translate(11 -15350) scale(1 -1)" patternUnits="userSpaceOnUse" viewBox="0 0 36 36">
-      <g>
-        <rect class="st0" width="36" height="36"/>
-        <polyline class="st2" points="36 36 0 36 0 0"/>
-      </g>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#e7eee6" stroke-opacity=".025"/>
     </pattern>
+    <style>
+      .shell { fill: #151b16; stroke: #4a5a4d; stroke-width: 5; stroke-linejoin: round; }
+      .wall { fill: none; stroke: #4a5a4d; stroke-width: 5; stroke-linecap: square; }
+      .inner { fill: none; stroke: #344239; stroke-width: 2; }
+      .soft { fill: none; stroke: #344239; stroke-width: 2; stroke-dasharray: 9 9; }
+      .glass { fill: none; stroke: #8b978c; stroke-width: 5; stroke-opacity: .55; }
+      .swing { fill: none; stroke: #59665b; stroke-width: 2; }
+      .zone { stroke-width: 3; stroke-linejoin: round; }
+      .zone-one { fill: #e2a04a; fill-opacity: .12; stroke: #e2a04a; stroke-opacity: .68; }
+      .zone-four { fill: #a98ad6; fill-opacity: .12; stroke: #a98ad6; stroke-opacity: .68; }
+      .code { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 600; letter-spacing: 2px; text-anchor: middle; }
+      .room { fill: #8b978c; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 2px; text-anchor: middle; }
+      .detail { fill: #59665b; font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 1.6px; text-anchor: middle; }
+      .tight { fill: #59665b; font-family: "IBM Plex Mono", monospace; font-size: 8px; letter-spacing: .4px; text-anchor: middle; }
+      .system { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 2px; text-anchor: middle; }
+    </style>
   </defs>
-  <rect class="st20" width="1000" height="933"/>
-  <rect class="st9" width="1000" height="933"/>
-  <path class="st1" d="M389,59H59v483"/>
-  <path class="st1" d="M941,467v407h-339"/>
-  <text class="st13" transform="translate(186 300)"><tspan x="0" y="0">ROOF BELOW</tspan></text>
-  <text class="st13" transform="translate(762 660)"><tspan x="0" y="0">ROOF BELOW</tspan></text>
-  <path class="st17" d="M59,542h330V59h552v408h-276v332h-63v75H59v-332Z"/>
-  <rect class="st18" x="395" y="65" width="540" height="396"/>
-  <polygon class="st19" points="395 473 596 473 596 868 65 868 65 548 395 548 395 473"/>
-  <path class="st3" d="M389,467h75M531,467h134"/>
-  <path class="st5" d="M464,467v-33M464,434c18.23,0,33,14.77,33,33h0M531,467v-33M531,434c-18.23,0-33,14.77-33,33h0"/>
-  <path class="st3" d="M602,467v332M602,542h63"/>
-  <path class="st5" d="M602,538h-33M569,538c0-18.23,14.77-33,33-33"/>
-  <text class="st10" transform="translate(617.4 512)"><tspan x="0" y="0">CLOSET</tspan></text>
-  <text class="st10" transform="translate(620 562)"><tspan x="0" y="0">STAIR</tspan></text>
-  <path class="st6" d="M602,578h63M602,595h63M602,612h63M602,629h63M602,646h63M602,663h63M602,680h63M602,697h63M602,714h63M602,731h63M602,748h63M602,765h63"/>
-  <path class="st7" d="M389,548v320M396,548v320"/>
-  <path class="st8" d="M665,545v52M665,609v51M665,672v51M772,467h56"/>
-  <text class="st12" transform="translate(576.99 130)"><tspan x="0" y="0">SYSTEM 1 / UPPER FLOOR</tspan></text>
-  <text class="st11" transform="translate(621.19 225)"><tspan x="0" y="0">MS-1-2</tspan></text>
-  <text class="st16" transform="translate(632.8 250)"><tspan x="0" y="0">THEATER</tspan></text>
-  <text class="st13" transform="translate(611.79 272)"><tspan x="0" y="0">MEDIA / CINEMA</tspan></text>
-  <text class="st14" transform="translate(463 575)"><tspan x="0" y="0">SYSTEM 4</tspan></text>
-  <text class="st15" transform="translate(451.19 640)"><tspan x="0" y="0">MS-4-2</tspan></text>
-  <text class="st16" transform="translate(476.6 664)"><tspan x="0" y="0">LOFT</tspan></text>
-  <text class="st13" transform="translate(457 685)"><tspan x="0" y="0">FLEX SPACE</tspan></text>
-  <text class="st16" transform="translate(194.8 700)"><tspan x="0" y="0">OPEN TO</tspan></text>
-  <text class="st16" transform="translate(176.39 720)"><tspan x="0" y="0">FAMILY ROOM</tspan></text>
-  <text class="st13" transform="translate(177.59 744)"><tspan x="0" y="0">OPEN TO BELOW</tspan></text>
-  <g class="st21">
-    <path class="st4" d="M28,821v-21M28,800l-7,10M28,800l7,10"/>
-    <text class="st13" transform="translate(24.2 838)"><tspan x="0" y="0">N</tspan></text>
+
+  <rect width="1000" height="933" fill="#0d110e"/>
+  <rect width="1000" height="933" fill="url(#grid)"/>
+
+  <!-- Areas with no upper floor above them -->
+  <path class="soft" d="M389 59H59V542"/>
+  <path class="soft" d="M941 467V874H602"/>
+  <text class="detail" x="224" y="300">ROOF BELOW</text>
+  <text class="detail" x="800" y="660">ROOF BELOW</text>
+
+  <!-- Exterior shell: 49'-0" x 45'-3" overall -->
+  <path class="shell" d="M59 542H389V59H941V467H665V799H602V874H59Z"/>
+
+  <!-- Zone fills -->
+  <rect class="zone zone-one" x="395" y="65" width="540" height="396"/>
+  <polygon class="zone zone-four" points="395 473 596 473 596 868 65 868 65 548 395 548"/>
+
+  <!-- Theater south wall, split by the double doors to the loft -->
+  <path class="wall" d="M389 467H464M531 467H665"/>
+  <path class="swing" d="M464 467V434M464 434A33 33 0 0 1 497 467M531 467V434M531 434A33 33 0 0 0 498 467"/>
+
+  <!-- Loft / stair partition and closet -->
+  <path class="wall" d="M602 467V799M602 542H665"/>
+  <path class="swing" d="M602 538H569M569 538A33 33 0 0 1 602 505"/>
+  <text class="tight" x="633" y="512">CLOSET</text>
+
+  <!-- Stair down to the main floor -->
+  <text class="tight" x="633" y="562">STAIR</text>
+  <path class="inner" d="M602 578h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63m-63 17h63" opacity=".8"/>
+
+  <!-- Loft railing over the family room -->
+  <path class="inner" d="M389 548V868M396 548V868"/>
+
+  <!-- Glazing -->
+  <path class="glass" d="M665 545V597M665 609V660M665 672V723M772 467H828"/>
+
+  <!-- Labels -->
+  <text class="system" x="665" y="130" fill="#e2a04a">SYSTEM 1</text>
+  <text class="code" x="665" y="225" fill="#e2a04a">MS-1-2</text>
+  <text class="room" x="665" y="250">THEATER</text>
+  <text class="detail" x="665" y="272">MEDIA / CINEMA</text>
+
+  <text class="system" x="495" y="575" fill="#a98ad6">SYSTEM 4</text>
+  <text class="code" x="495" y="640" fill="#a98ad6">MS-4-2</text>
+  <text class="room" x="495" y="664">LOFT</text>
+  <text class="detail" x="495" y="685">FLEX SPACE</text>
+
+  <text class="room" x="227" y="700">OPEN TO</text>
+  <text class="room" x="227" y="720">FAMILY ROOM</text>
+  <text class="detail" x="227" y="744">OPEN TO BELOW</text>
+
+  <g transform="translate(28 800)" opacity=".72">
+    <path d="M0 21V0M0 0l-7 10M0 0l7 10" stroke="#8b978c" stroke-width="2" fill="none"/>
+    <text x="0" y="38" class="detail">N</text>
   </g>
 </svg>

@@ -1,56 +1,29 @@
-import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuth } from "../lib/auth";
-import { TrendChart, withLiveReading } from "../components/TrendChart";
-import { UnitCard } from "../components/UnitCard";
-
-const RANGES = [
-  { id: "12h", label: "12 h" },
-  { id: "24h", label: "24 h" },
-  { id: "7d", label: "7 d" },
-] as const;
+import { CondenserCompare } from "../components/CondenserCompare";
+import { groupForUnit, groupUnitsByCondenser } from "../lib/floorplan";
 
 export function UnitDetailPage() {
   const { unitId } = useParams();
+  const navigate = useNavigate();
   const { authArgs } = useAuth();
-  const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("24h");
-  const rangeMs =
-    range === "12h"
-      ? 12 * 60 * 60 * 1000
-      : range === "7d"
-        ? 7 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
-  const startTs = useMemo(() => Date.now() - rangeMs, [rangeMs]);
-
   const typedId = unitId as Id<"units"> | undefined;
   const site = useQuery(api.settings.get, authArgs);
-  const unit = useQuery(
-    api.units.get,
-    typedId && authArgs !== "skip" ? { ...authArgs, unitId: typedId } : "skip",
-  );
-  const readings = useQuery(
-    api.readings.forUnit,
-    typedId && authArgs !== "skip"
-      ? {
-          ...authArgs,
-          unitId: typedId,
-          startTs,
-          // Open-ended so new samples stay in the live Convex subscription.
-          endTs: startTs + rangeMs * 100,
-        }
-      : "skip",
-  );
+  const units = useQuery(api.units.list, authArgs);
 
   if (!typedId) {
     return <p className="text-mist">Missing unit.</p>;
   }
-  if (unit === undefined || site === undefined) {
+  if (units === undefined || site === undefined) {
     return <p className="text-mist">Loading unit…</p>;
   }
-  if (unit === null) {
+
+  const groups = groupUnitsByCondenser(units);
+  const group = groupForUnit(units, typedId);
+  if (!group) {
     return <p className="text-mist">Unit not found.</p>;
   }
 
@@ -59,35 +32,24 @@ export function UnitDetailPage() {
       <Link to="/" className="font-mono text-[11px] uppercase tracking-widest text-mist">
         ← Zones
       </Link>
-      <UnitCard unit={unit} temperatureUnit={site.temperatureUnit} />
-      <div className="flex items-center gap-2">
-        <h2 className="mr-auto text-lg">History</h2>
-        {RANGES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setRange(item.id)}
-            className={`px-2 py-1 font-mono text-[11px] uppercase ${
-              range === item.id ? "bg-paper text-ink" : "text-mist"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      {readings === undefined ? (
-        <p className="text-mist">Loading trend…</p>
-      ) : readings.length === 0 ? (
-        <p className="border border-line bg-panel p-6 text-mist">
-          No samples yet. Once the ESP32 starts posting, this chart fills in.
-        </p>
-      ) : (
-        <TrendChart
-          readings={withLiveReading(readings, unit)}
-          temperatureUnit={site.temperatureUnit}
-          showSat={unit.supplyAirTempC !== undefined}
-        />
-      )}
+      <CondenserCompare
+        units={group.units}
+        temperatureUnit={site.temperatureUnit}
+        groups={groups}
+        groupKey={group.key}
+        onSelectGroup={(key) => {
+          const next = groups.find((item) => item.key === key)?.units[0];
+          if (next) {
+            void navigate(`/unit/${next._id}`);
+          }
+        }}
+        kicker={group.label}
+        title={
+          group.units.length > 1
+            ? `${group.units.length} indoor heads`
+            : (group.units[0]?.name ?? "History")
+        }
+      />
     </div>
   );
 }
