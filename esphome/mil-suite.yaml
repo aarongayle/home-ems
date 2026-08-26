@@ -1,0 +1,193 @@
+# Home EMS example ESPHome config
+#
+# Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
+# Board: 30-pin ESP-WROOM-32 DevKitC (not ESP32-S3). Wire UART to CN105
+# at 2400 baud. Secrets live in esphome/secrets.yaml.
+#
+# This file posts live state to Home EMS and polls for setpoint/mode
+# commands. Keep the ESPHome web_server so the unit still works locally
+# if the internet is down.
+
+substitutions:
+  name: mil-suite
+  friendly_name: Mother-in-Law's Suite
+  convex_site: https://wary-tern-102.convex.site
+  device_token: "d041832b4a714538cfe09a28bb4e1de54fcdbb483bf6b4cb"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+uart:
+  id: HP_UART
+  baud_rate: 2400
+  parity: EVEN
+  stop_bits: 1
+  data_bits: 8
+  tx_pin: GPIO17
+  rx_pin:
+    number: GPIO16
+    mode:
+      input: true
+      pullup: true
+  debug:
+    direction: BOTH
+    dummy_receiver: false
+    after:
+      timeout: 50ms
+      bytes: 8
+
+external_components:
+  - source: github://echavet/MitsubishiCN105ESPHome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+logger:
+  level: INFO
+
+http_request:
+  id: ems_http
+  timeout: 10s
+  verify_ssl: true
+
+web_server:
+  port: 80
+
+climate:
+  - platform: cn105
+    id: hp
+    name: "${friendly_name}"
+    icon: mdi:heat-pump
+    update_interval: 2s
+    remote_temperature_timeout: 30min
+    remote_temperature_keepalive_interval: 20s
+    # Indoor F/C lookup clamps outdoor air to ~31 C. Home EMS converts C/F itself.
+    fahrenheit_compatibility: "disabled"
+    outside_air_temperature_sensor:
+      id: oat
+      name: Outside Air Temp
+    compressor_frequency_sensor:
+      id: comp_hz
+      name: Compressor Frequency
+      entity_category: diagnostic
+    input_power_sensor:
+      id: input_power
+      name: Input Power
+      disabled_by_default: true
+    vertical_vane_select:
+      name: Vertical Vane
+    isee_sensor:
+      name: i-See
+      entity_category: diagnostic
+    stage_sensor:
+      name: Stage
+      entity_category: diagnostic
+    sub_mode_sensor:
+      name: Sub Mode
+      entity_category: diagnostic
+    auto_sub_mode_sensor:
+      name: Auto Sub Mode
+      entity_category: diagnostic
+    functions_sensor:
+      name: Unit Functions
+      entity_category: diagnostic
+    functions_get_button:
+      name: Read Unit Functions
+      entity_category: diagnostic
+    error_code_sensor:
+      name: HVAC Error
+      entity_category: diagnostic
+
+interval:
+  - interval: 20s
+    then:
+      - http_request.post:
+          url: ${convex_site}/ingest
+          request_headers:
+            Content-Type: application/json
+            Authorization: Bearer ${device_token}
+          body: !lambda |-
+            char room[16] = "null";
+            char target[16] = "null";
+            char outdoor[16] = "null";
+            char hz[16] = "null";
+            char power[16] = "null";
+            if (std::isfinite(id(hp).current_temperature))
+              snprintf(room, sizeof(room), "%.1f", id(hp).current_temperature);
+            if (std::isfinite(id(hp).target_temperature))
+              snprintf(target, sizeof(target), "%.1f", id(hp).target_temperature);
+            if (std::isfinite(id(oat).state))
+              snprintf(outdoor, sizeof(outdoor), "%.1f", id(oat).state);
+            if (std::isfinite(id(comp_hz).state))
+              snprintf(hz, sizeof(hz), "%.0f", id(comp_hz).state);
+            if (std::isfinite(id(input_power).state))
+              snprintf(power, sizeof(power), "%.0f", id(input_power).state);
+            char buf[768];
+            snprintf(
+                buf, sizeof(buf),
+                "{\"room_temp\":%s,\"target_temp\":%s,\"outdoor_temp\":%s,\"compressor_hz\":%s,\"input_power\":%s,\"mode\":\"%s\",\"hvac_action\":\"%s\"}",
+                room, target, outdoor, hz, power,
+                LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
+                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
+            return std::string(buf);
+
+      - http_request.get:
+          url: ${convex_site}/commands
+          capture_response: true
+          request_headers:
+            Authorization: Bearer ${device_token}
+          on_response:
+            then:
+              - lambda: |-
+                  json::parse_json(body, [](JsonObject root) -> bool {
+                    JsonArray cmds = root["commands"].as<JsonArray>();
+                    if (!cmds) {
+                      return false;
+                    }
+                    for (JsonObject cmd : cmds) {
+                      auto call = id(hp).make_call();
+                      const char *mode = cmd["mode"].as<const char *>();
+                      if (mode) {
+                        if (strcmp(mode, "off") == 0) call.set_mode(climate::CLIMATE_MODE_OFF);
+                        else if (strcmp(mode, "heat") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT);
+                        else if (strcmp(mode, "cool") == 0) call.set_mode(climate::CLIMATE_MODE_COOL);
+                        else if (strcmp(mode, "auto") == 0) call.set_mode(climate::CLIMATE_MODE_AUTO);
+                        else if (strcmp(mode, "dry") == 0) call.set_mode(climate::CLIMATE_MODE_DRY);
+                        else if (strcmp(mode, "fan_only") == 0) call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
+                        else if (strcmp(mode, "heat_cool") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT_COOL);
+                      }
+                      if (!cmd["target_temp"].isNull()) {
+                        call.set_target_temperature(cmd["target_temp"].as<float>());
+                      }
+                      const char *fan = cmd["fan_mode"].as<const char *>();
+                      if (fan) {
+                        if (strcmp(fan, "auto") == 0) call.set_fan_mode(climate::CLIMATE_FAN_AUTO);
+                        else if (strcmp(fan, "quiet") == 0) call.set_fan_mode(climate::CLIMATE_FAN_QUIET);
+                        else if (strcmp(fan, "low") == 0) call.set_fan_mode(climate::CLIMATE_FAN_LOW);
+                        else if (strcmp(fan, "medium") == 0) call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
+                        else if (strcmp(fan, "high") == 0) call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
+                      }
+                      call.perform();
+                    }
+                    return true;
+                  });

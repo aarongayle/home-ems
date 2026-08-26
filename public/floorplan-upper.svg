@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" role="img" aria-labelledby="title description">
+  <title id="title">Upper floor climate zone</title>
+  <desc id="description">Simplified upper floor plan showing the theater mini-split climate zone.</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#e7eee6" stroke-opacity=".025"/>
+    </pattern>
+    <style>
+      .wall { fill: #151b16; stroke: #4a5a4d; stroke-width: 4; stroke-linejoin: round; }
+      .inner { fill: none; stroke: #344239; stroke-width: 2; }
+      .soft { fill: none; stroke: #344239; stroke-width: 2; stroke-dasharray: 8 8; }
+      .room { fill: #8b978c; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 1.8px; text-anchor: middle; text-transform: uppercase; }
+      .detail { fill: #59665b; font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: 1px; text-anchor: middle; }
+      .zone { font-family: "IBM Plex Mono", monospace; font-size: 18px; font-weight: 600; letter-spacing: 2px; text-anchor: middle; }
+      .system { font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: 1.8px; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="720" fill="#0d110e"/>
+  <rect width="1000" height="720" fill="url(#grid)"/>
+  <path class="soft" d="M92 265H248V50H721V75H929V295H721V665H559V533H387V665H92V265Z" opacity=".82"/>
+  <text class="detail" x="820" y="278">ROOF BELOW</text>
+  <text class="detail" x="474" y="647">MAIN FLOOR BELOW</text>
+
+  <!-- Theater -->
+  <path class="wall" d="M388 50H721V272H550V305H388V50Z"/>
+  <path d="M393 55H716V267H393Z" fill="#e2a04a" fill-opacity=".18" stroke="#e2a04a" stroke-opacity=".7" stroke-width="2"/>
+  <text class="system" x="554" y="82" fill="#e2a04a">SYSTEM 1 / UPPER FLOOR</text>
+  <text class="zone" x="554" y="155" fill="#e2a04a">MS-1-3</text>
+  <text class="room" x="554" y="180">THEATER</text>
+  <text class="detail" x="554" y="201">MEDIA / CINEMA</text>
+
+  <!-- Loft and open volume -->
+  <path class="wall" d="M248 272H550V533H248V272Z"/>
+  <path class="inner" d="M388 272V533M388 305H550"/>
+  <text class="room" x="324" y="385">OPEN TO</text>
+  <text class="room" x="324" y="405">FAMILY ROOM</text>
+  <text class="room" x="468" y="385">LOFT</text>
+  <text class="detail" x="468" y="405">FLEX SPACE</text>
+
+  <!-- Closet and landing -->
+  <path class="inner" d="M550 272V533M550 305H620V533"/>
+  <text class="detail" x="585" y="291">CLOSET</text>
+  <text class="room" x="585" y="450" transform="rotate(-90 585 450)">STAIR</text>
+  <g fill="none" stroke="#59665b" stroke-width="2" opacity=".8">
+    <path d="M550 328h70m-70 22h70m-70 22h70m-70 22h70m-70 22h70m-70 22h70m-70 22h70m-70 22h70"/>
+    <path d="M388 304h18a18 18 0 0 0-18-18"/>
+  </g>
+
+  <g transform="translate(88 635)" opacity=".7">
+    <path d="M0 18V0M0 0l-6 9M0 0l6 9" stroke="#8b978c" stroke-width="2" fill="none"/>
+    <text x="0" y="32" class="detail">N</text>
+  </g>
+</svg>

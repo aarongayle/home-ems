@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-ink: #0d110e;
+  --color-panel: #151b16;
+  --color-panel-2: #1c241e;
+  --color-line: #2a352c;
+  --color-mist: #8b978c;
+  --color-paper: #e7eee6;
+  --color-heat: #e2a04a;
+  --color-cool: #5aa7bc;
+  --color-ok: #86b56a;
+  --color-warn: #d17a4a;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+}
+
+.ems-grid {
+  background-image:
+    linear-gradient(rgba(232, 238, 230, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 238, 230, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}

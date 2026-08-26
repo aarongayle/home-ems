@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1194.13 922.74" role="img" aria-labelledby="title description">
+  <title id="title">Main floor climate zones</title>
+  <desc id="description">Simplified main floor plan based on traced exterior walls and six HVAC zone boundaries.</desc>
+  <defs>
+    <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
+      <path d="M46 0H0V46" fill="none" stroke="#e7eee6" stroke-opacity=".025"/>
+    </pattern>
+    <style>
+      .shell { fill: #151b16; stroke: #4a5a4d; stroke-width: 5; stroke-linejoin: round; }
+      .zone-one { fill: #e2a04a; fill-opacity: .12; stroke: #e2a04a; stroke-opacity: .68; }
+      .zone-two { fill: #86b56a; fill-opacity: .12; stroke: #86b56a; stroke-opacity: .68; }
+      .zone-three { fill: #5aa7bc; fill-opacity: .12; stroke: #5aa7bc; stroke-opacity: .68; }
+      .zone { stroke-width: 3; stroke-linejoin: round; }
+      .code { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 600; letter-spacing: 2px; text-anchor: middle; }
+      .room { fill: #8b978c; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 2px; text-anchor: middle; }
+      .detail { fill: #59665b; font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 1.6px; text-anchor: middle; }
+      .system { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 2px; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="1194.13" height="922.74" fill="#0d110e"/>
+  <rect width="1194.13" height="922.74" fill="url(#grid)"/>
+
+  <!-- Exterior walls from the supplied trace -->
+  <polygon
+    class="shell"
+    points="1036.76 100.45 499.09 100.45 499.09 279.67 499.09 335.04 499.09 367.1 174.15 367.1 174.15 595.87 187.26 595.87 187.26 731.38 324.23 731.38 324.23 687.67 499.09 687.67 499.09 731.38 625.86 731.38 625.86 520.1 660.83 520.1 660.83 335.04 1036.76 335.04 1036.76 100.45"
+  />
+  <rect class="shell" x="812.37" y="566.73" width="193.8" height="271.02"/>
+
+  <!-- System 1 -->
+  <rect class="zone zone-one" x="499.09" y="100.45" width="142.11" height="159.84"/>
+  <polygon
+    class="zone zone-one"
+    points="812.37 100.45 641.2 100.45 641.2 157.05 641.2 191.33 641.2 260.29 778.93 260.29 778.93 191.33 812.37 191.33 812.37 100.45"
+  />
+
+  <!-- System 2 -->
+  <rect class="zone zone-two" x="812.37" y="566.73" width="193.8" height="271.02"/>
+  <polygon
+    class="zone zone-two"
+    points="505.15 618.11 505.15 687.06 499.09 687.06 499.09 731.38 505.15 731.38 524.72 731.38 625.86 731.38 625.86 618.11 505.15 618.11"
+  />
+
+  <!-- System 3 -->
+  <polygon
+    class="zone zone-three"
+    points="625.86 260.29 499.09 260.29 499.09 367.1 318.79 367.1 318.79 687.06 505.15 687.06 505.15 557.54 625.86 557.54 625.86 260.29"
+  />
+  <polygon
+    class="zone zone-three"
+    points="318.79 687.06 318.79 595.74 318.79 367.1 174.15 367.1 174.15 595.74 187.26 595.74 187.26 731.38 310.6 731.38 318.79 731.38 324.23 731.38 324.23 687.06 318.79 687.06"
+  />
+
+  <!-- Zone labels -->
+  <g>
+    <text class="system" x="570.15" y="127" fill="#e2a04a">SYSTEM 1</text>
+    <text class="code" x="570.15" y="180" fill="#e2a04a">MS-1-1</text>
+    <text class="room" x="570.15" y="201">PRIMARY BEDROOM</text>
+
+    <text class="system" x="710" y="127" fill="#e2a04a">SYSTEM 1</text>
+    <text class="code" x="710" y="180" fill="#e2a04a">MS-1-2</text>
+    <text class="room" x="710" y="201">PRIMARY BATH</text>
+
+    <text class="system" x="455" y="397" fill="#5aa7bc">SYSTEM 3</text>
+    <text class="code" x="455" y="472" fill="#5aa7bc">MS-3-2</text>
+    <text class="room" x="455" y="494">FAMILY / KITCHEN</text>
+
+    <text class="system" x="245" y="397" fill="#5aa7bc">SYSTEM 3</text>
+    <text class="code" x="245" y="510" fill="#5aa7bc">MS-3-1</text>
+    <text class="room" x="245" y="532">BEDROOM WING</text>
+
+    <text class="system" x="565" y="642" fill="#86b56a">SYSTEM 2</text>
+    <text class="code" x="565" y="684" fill="#86b56a">MS-2-2</text>
+    <text class="room" x="565" y="705">STUDY</text>
+
+    <text class="system" x="909.27" y="598" fill="#86b56a">SYSTEM 2</text>
+    <text class="code" x="909.27" y="700" fill="#86b56a">MS-2-1</text>
+    <text class="room" x="909.27" y="722">GUEST DWELLING</text>
+  </g>
+
+  <!-- Unconditioned and circulation areas -->
+  <text class="room" x="900" y="225">GARAGE</text>
+  <text class="detail" x="900" y="245">UNCONDITIONED</text>
+  <text class="room" x="698" y="310">UTILITY</text>
+  <text class="detail" x="648" y="618" transform="rotate(-90 648 618)">CIRCULATION</text>
+
+  <g transform="translate(112 782)" opacity=".72">
+    <path d="M0 21V0M0 0l-7 10M0 0l7 10" stroke="#8b978c" stroke-width="2" fill="none"/>
+    <text x="0" y="38" class="detail">N</text>
+  </g>
+</svg>
