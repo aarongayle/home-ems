@@ -10,6 +10,12 @@ crons.interval(
 );
 
 crons.interval(
+  "mark-stale-remote-sensors-offline",
+  { minutes: 1 },
+  internal.remoteSensors.markStaleOffline,
+);
+
+crons.interval(
   "expire-sessions",
   { hours: 1 },
   internal.auth.expireSessions,

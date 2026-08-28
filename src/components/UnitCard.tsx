@@ -25,6 +25,8 @@ export type UnitCardData = {
   fanMode: FanMode;
   hvacAction: HvacAction;
   roomTempC?: number;
+  internalTempC?: number;
+  remoteTempC?: number;
   targetTempC?: number;
   supplyAirTempC?: number;
   compressorHz?: number;
@@ -90,12 +92,21 @@ export function UnitCard({
       <div className="grid grid-cols-[1fr_auto] items-end gap-4 px-4 py-5">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-widest text-mist">
-            Room
+            {unit.remoteTempC !== undefined ? "Room · remote" : "Room"}
           </p>
           <p className="font-mono text-5xl leading-none tracking-tight">
             {displayTemp(unit.roomTempC, temperatureUnit, 1)}
             <span className="ml-1 text-lg text-mist">°{temperatureUnit}</span>
           </p>
+          {unit.remoteTempC !== undefined && unit.internalTempC !== undefined && (
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-mist">
+              Head{" "}
+              <span className="text-sm tracking-normal text-paper">
+                {displayTemp(unit.internalTempC, temperatureUnit, 1)}°
+                {temperatureUnit}
+              </span>
+            </p>
+          )}
           {unit.supplyAirTempC !== undefined && (
             <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-mist">
               SAT{" "}

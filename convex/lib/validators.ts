@@ -65,6 +65,18 @@ export const unitPublicValidator = v.object({
   fanMode: fanModeValidator,
   hvacAction: hvacActionValidator,
   roomTempC: v.optional(v.number()),
+  internalTempC: v.optional(v.number()),
+  remoteTempC: v.optional(v.number()),
+  remoteTempAt: v.optional(v.number()),
+  remoteSensor: v.optional(
+    v.object({
+      _id: v.id("remoteSensors"),
+      slug: v.string(),
+      name: v.string(),
+      online: v.boolean(),
+      lastSeenAt: v.optional(v.number()),
+    }),
+  ),
   targetTempC: v.optional(v.number()),
   outdoorTempC: v.optional(v.number()),
   supplyAirTempC: v.optional(v.number()),

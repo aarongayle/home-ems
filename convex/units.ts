@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import {
+  internalMutation,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
 import { householdMutation, householdQuery } from "./lib/auth";
 import {
   exceedsDeadband,
@@ -7,6 +12,7 @@ import {
   parseClimateMode,
   parseFanMode,
   parseHvacAction,
+  REMOTE_TEMP_STALE_MS,
   roundHalf,
   SAT_DEADBAND_C,
   sha256Hex,
@@ -19,6 +25,16 @@ import {
   mapZoneValidator,
   unitPublicValidator,
 } from "./lib/validators";
+
+async function remoteSensorForUnit(
+  ctx: QueryCtx | MutationCtx,
+  unitId: Id<"units">,
+) {
+  return await ctx.db
+    .query("remoteSensors")
+    .withIndex("by_unit", (q) => q.eq("unitId", unitId))
+    .unique();
+}
 
 export const list = householdQuery({
   args: {},
@@ -33,7 +49,8 @@ export const list = householdQuery({
           q.eq("unitId", unit._id).eq("status", "queued"),
         )
         .take(20);
-      result.push(toPublicUnit(unit, pending.length));
+      const remoteSensor = await remoteSensorForUnit(ctx, unit._id);
+      result.push(toPublicUnit(unit, pending.length, remoteSensor));
     }
     return result;
   },
@@ -55,7 +72,8 @@ export const get = householdQuery({
         q.eq("unitId", unit._id).eq("status", "queued"),
       )
       .take(20);
-    return toPublicUnit(unit, pending.length);
+    const remoteSensor = await remoteSensorForUnit(ctx, unit._id);
+    return toPublicUnit(unit, pending.length, remoteSensor);
   },
 });
 
@@ -211,6 +229,10 @@ export const remove = householdMutation({
     for (const command of [...queued, ...sent]) {
       await ctx.db.delete("commands", command._id);
     }
+    const remoteSensor = await remoteSensorForUnit(ctx, args.unitId);
+    if (remoteSensor) {
+      await ctx.db.delete("remoteSensors", remoteSensor._id);
+    }
     await ctx.db.delete("units", args.unitId);
     return null;
   },
@@ -336,6 +358,7 @@ export const applyReportedState = internalMutation({
       fanMode: typeof fanMode;
       hvacAction: typeof hvacAction;
       roomTempC?: number;
+      internalTempC?: number;
       targetTempC?: number;
       outdoorTempC?: number;
       supplyAirTempC?: number;
@@ -352,7 +375,18 @@ export const applyReportedState = internalMutation({
       fanMode,
       hvacAction,
     };
-    if (args.roomTempC !== undefined) reportedPatch.roomTempC = args.roomTempC;
+    if (args.roomTempC !== undefined) {
+      reportedPatch.internalTempC = args.roomTempC;
+    }
+    const remoteFresh =
+      unit.remoteTempC !== undefined &&
+      unit.remoteTempAt !== undefined &&
+      now - unit.remoteTempAt < REMOTE_TEMP_STALE_MS;
+    if (remoteFresh) {
+      reportedPatch.roomTempC = unit.remoteTempC;
+    } else if (args.roomTempC !== undefined) {
+      reportedPatch.roomTempC = args.roomTempC;
+    }
     if (args.targetTempC !== undefined) reportedPatch.targetTempC = args.targetTempC;
     if (args.outdoorTempC !== undefined) reportedPatch.outdoorTempC = args.outdoorTempC;
     const supplyAirTempC = exceedsDeadband(
@@ -384,7 +418,7 @@ export const applyReportedState = internalMutation({
       await ctx.db.insert("readings", {
         unitId: unit._id,
         ts: now,
-        roomTempC: args.roomTempC,
+        roomTempC: remoteFresh ? unit.remoteTempC : args.roomTempC,
         targetTempC: args.targetTempC ?? unit.targetTempC,
         outdoorTempC: args.outdoorTempC,
         supplyAirTempC,

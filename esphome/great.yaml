@@ -1,14 +1,13 @@
-# Office mini split.
+# Save as great-room.yaml in ESPHome Device Builder.
 #
 # Firmware: https://github.com/echavet/MitsubishiCN105ESPHome
-# Board: 30-pin ESP-WROOM-32. SAT NTC on GPIO36 (VP).
-# Secrets live in esphome/secrets.yaml.
+# Secrets live in secrets.yaml next to this file.
 
 substitutions:
-  name: office
-  friendly_name: Office
+  name: great-room
+  friendly_name: "Great Room"
   convex_site: https://wary-tern-102.convex.site
-  device_token: "91dd72ff341195f4d4b166e32e4cc66e4952576ad9fb0db4"
+  device_token: "9a462aef3482e0810bc15586713f4b9836c81a85038e29ed"
 
 esphome:
   name: ${name}
@@ -94,7 +93,7 @@ sensor:
       reference_resistance: 10kOhm
     filters:
       # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
-      - offset: 3
+      - offset: 2.5
       - sliding_window_moving_average:
           window_size: 6
           send_every: 1

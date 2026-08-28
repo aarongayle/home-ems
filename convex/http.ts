@@ -118,6 +118,52 @@ http.route({
 });
 
 http.route({
+  path: "/remote-temp",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    let body: { token?: unknown; room_temp?: unknown; temperature?: unknown };
+    try {
+      const raw = await request.text();
+      const sanitized = raw
+        .replace(/-?nan/gi, "null")
+        .replace(/-?inf/gi, "null");
+      body = JSON.parse(sanitized) as {
+        token?: unknown;
+        room_temp?: unknown;
+        temperature?: unknown;
+      };
+    } catch {
+      return json({ error: "Invalid JSON body" }, 400);
+    }
+
+    const token =
+      bearerToken(request) ??
+      (typeof body.token === "string" ? body.token : undefined);
+    if (!token) {
+      return json({ error: "Missing device token" }, 401);
+    }
+
+    const roomTempC = asFiniteNumber(body.room_temp ?? body.temperature);
+    if (roomTempC === undefined) {
+      return json({ ok: true, skipped: true });
+    }
+
+    try {
+      const result = await ctx.runMutation(internal.remoteSensors.applyReading, {
+        tokenHash: await sha256Hex(token),
+        roomTempC,
+      });
+      return json({ ok: true, ...result });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Remote temp ingest failed";
+      const status = message.includes("Unknown") ? 401 : 400;
+      return json({ error: message }, status);
+    }
+  }),
+});
+
+http.route({
   path: "/commands",
   method: "GET",
   handler: httpAction(async (ctx, request) => {

@@ -4,6 +4,7 @@ import {
   climateModeValidator,
   fanModeValidator,
 } from "./lib/validators";
+import { REMOTE_TEMP_STALE_MS } from "./lib/helpers";
 
 const commandPayloadValidator = v.object({
   id: v.id("commands"),
@@ -19,6 +20,7 @@ export const claimQueued = internalMutation({
   returns: v.object({
     slug: v.string(),
     commands: v.array(commandPayloadValidator),
+    remote_temp: v.optional(v.number()),
   }),
   handler: async (ctx, args) => {
     const unit = await ctx.db
@@ -56,6 +58,15 @@ export const claimQueued = internalMutation({
       lastSeenAt: now,
     });
 
-    return { slug: unit.slug, commands };
+    const remoteFresh =
+      unit.remoteTempC !== undefined &&
+      unit.remoteTempAt !== undefined &&
+      now - unit.remoteTempAt < REMOTE_TEMP_STALE_MS;
+
+    return {
+      slug: unit.slug,
+      commands,
+      remote_temp: remoteFresh ? unit.remoteTempC : undefined,
+    };
   },
 });

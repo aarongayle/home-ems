@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "../lib/auth";
 import { convexSiteUrl } from "../lib/format";
-import { esphomeSnippet } from "../lib/esphome";
+import { esphomeSnippet, esphomeRemoteSensorSnippet } from "../lib/esphome";
 import { MAP_ZONES, type MapZone } from "../lib/floorplan";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -17,6 +17,9 @@ export function SettingsPage() {
   const setMapZone = useMutation(api.units.setMapZone);
   const rotateToken = useMutation(api.units.rotateToken);
   const removeUnit = useMutation(api.units.remove);
+  const createRemoteSensor = useMutation(api.remoteSensors.create);
+  const rotateRemoteSensorToken = useMutation(api.remoteSensors.rotateToken);
+  const removeRemoteSensor = useMutation(api.remoteSensors.remove);
   const seed = useMutation(api.seed.demoHome);
 
   const [homeName, setHomeName] = useState<string | null>(null);
@@ -25,14 +28,24 @@ export function SettingsPage() {
   const [includeSat, setIncludeSat] = useState(false);
   const [satOffset, setSatOffset] = useState("0");
   const [copied, setCopied] = useState(false);
-  const [issued, setIssued] = useState<{
-    unitId: Id<"units">;
-    slug: string;
-    name: string;
-    deviceToken: string;
-    includeSat: boolean;
-    satOffset: number;
-  } | null>(null);
+  const [issued, setIssued] = useState<
+    | {
+        kind: "unit";
+        unitId: Id<"units">;
+        slug: string;
+        name: string;
+        deviceToken: string;
+        includeSat: boolean;
+        satOffset: number;
+      }
+    | {
+        kind: "remote-sensor";
+        slug: string;
+        name: string;
+        deviceToken: string;
+      }
+    | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   const parsedSatOffset = Number(satOffset);
@@ -42,14 +55,21 @@ export function SettingsPage() {
   const siteUrl = cloudUrl ? convexSiteUrl(cloudUrl) : "";
   const session = authArgs === "skip" ? {} : authArgs;
   const issuedYaml = issued
-    ? esphomeSnippet({
-        slug: issued.slug,
-        name: issued.name,
-        convexSiteUrl: siteUrl,
-        deviceToken: issued.deviceToken,
-        includeSat: issued.includeSat,
-        satOffset: issued.satOffset,
-      })
+    ? issued.kind === "remote-sensor"
+      ? esphomeRemoteSensorSnippet({
+          slug: issued.slug,
+          name: issued.name,
+          convexSiteUrl: siteUrl,
+          deviceToken: issued.deviceToken,
+        })
+      : esphomeSnippet({
+          slug: issued.slug,
+          name: issued.name,
+          convexSiteUrl: siteUrl,
+          deviceToken: issued.deviceToken,
+          includeSat: issued.includeSat,
+          satOffset: issued.satOffset,
+        })
     : "";
 
   if (site === undefined || units === undefined) {
@@ -136,6 +156,7 @@ export function SettingsPage() {
               void createUnit({ ...session, name, room })
                 .then((result) => {
                   setIssued({
+                    kind: "unit",
                     ...result,
                     name,
                     includeSat,
@@ -238,7 +259,10 @@ export function SettingsPage() {
             <p className="mt-3 text-sm text-mist">
               Save this as{" "}
               <span className="font-mono text-paper">{issued.slug}.yaml</span>{" "}
-              in ESPHome Device Builder and flash it. Ingest URL: {siteUrl}/ingest
+              in ESPHome Device Builder and flash it.{" "}
+              {issued.kind === "remote-sensor"
+                ? `Ingest URL: ${siteUrl}/remote-temp`
+                : `Ingest URL: ${siteUrl}/ingest`}
             </p>
             <div className="mt-3 flex items-center justify-end">
               <button
@@ -349,6 +373,7 @@ export function SettingsPage() {
                 onClick={() => {
                   void rotateToken({ ...session, unitId: unit._id }).then((result) => {
                     setIssued({
+                      kind: "unit",
                       unitId: unit._id,
                       slug: unit.slug,
                       name: unit.name,
@@ -363,6 +388,88 @@ export function SettingsPage() {
                 New token
               </button>
             </form>
+            {unit.remoteSensor ? (
+              <div className="mt-4 border-t border-line pt-4">
+                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-mist">
+                  Remote room sensor
+                </p>
+                <p className="mt-2 font-mono text-[11px] text-mist">
+                  {unit.remoteSensor.slug} ·{" "}
+                  {unit.remoteSensor.online ? "online" : "offline"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="border border-line px-3 py-2 text-sm"
+                    onClick={() => {
+                      const sensor = unit.remoteSensor;
+                      if (!sensor) {
+                        return;
+                      }
+                      void rotateRemoteSensorToken({
+                        ...session,
+                        sensorId: sensor._id,
+                      }).then((result) => {
+                        setIssued({
+                          kind: "remote-sensor",
+                          slug: sensor.slug,
+                          name: sensor.name,
+                          deviceToken: result.deviceToken,
+                        });
+                        setCopied(false);
+                      });
+                    }}
+                  >
+                    New sensor token
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm text-warn"
+                    onClick={() => {
+                      const sensor = unit.remoteSensor;
+                      if (!sensor) {
+                        return;
+                      }
+                      if (confirm(`Remove ${sensor.name}?`)) {
+                        void removeRemoteSensor({
+                          ...session,
+                          sensorId: sensor._id,
+                        });
+                      }
+                    }}
+                  >
+                    Remove sensor
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="mt-4 border border-line px-3 py-2 text-sm"
+                onClick={() => {
+                  setError(null);
+                  void createRemoteSensor({ ...session, unitId: unit._id })
+                    .then((result) => {
+                      setIssued({
+                        kind: "remote-sensor",
+                        slug: result.slug,
+                        name: result.name,
+                        deviceToken: result.deviceToken,
+                      });
+                      setCopied(false);
+                    })
+                    .catch((err: unknown) => {
+                      setError(
+                        err instanceof Error
+                          ? err.message
+                          : "Could not add remote sensor",
+                      );
+                    });
+                }}
+              >
+                Add remote room sensor
+              </button>
+            )}
           </article>
         ))}
       </section>

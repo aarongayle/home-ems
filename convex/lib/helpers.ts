@@ -58,6 +58,20 @@ export function sanitizeOutdoorTempC(value: number | undefined): number | undefi
 /** Hold SAT until it moves at least this far from the last written value. */
 export const SAT_DEADBAND_C = 0.3;
 
+/** Stop feeding a remote room temp to the head after this long without a report. */
+export const REMOTE_TEMP_STALE_MS = 10 * 60 * 1000;
+
+/** Mitsubishi CN105 accepts remote room temp in this range. */
+export const REMOTE_TEMP_MIN_C = 8;
+export const REMOTE_TEMP_MAX_C = 39.5;
+
+export function clampRemoteTempC(value: number): number | undefined {
+  if (value < REMOTE_TEMP_MIN_C || value > REMOTE_TEMP_MAX_C) {
+    return undefined;
+  }
+  return value;
+}
+
 export function exceedsDeadband(
   next: number | undefined,
   previous: number | undefined,
@@ -179,9 +193,22 @@ export function parseHvacAction(value: unknown): HvacAction | undefined {
 export function toPublicUnit(
   unit: Doc<"units">,
   pendingCommandCount: number,
+  remoteSensor?: Doc<"remoteSensors"> | null,
 ) {
   const { deviceTokenHash: _deviceTokenHash, ...rest } = unit;
-  return { ...rest, pendingCommandCount };
+  return {
+    ...rest,
+    pendingCommandCount,
+    remoteSensor: remoteSensor
+      ? {
+          _id: remoteSensor._id,
+          slug: remoteSensor.slug,
+          name: remoteSensor.name,
+          online: remoteSensor.online,
+          lastSeenAt: remoteSensor.lastSeenAt,
+        }
+      : undefined,
+  };
 }
 
 export function roundHalf(value: number): number {

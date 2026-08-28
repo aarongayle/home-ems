@@ -1,0 +1,113 @@
+# WiFi room sensor for West Wing. No CN105 wire.
+# Create the sensor in Settings → West Wing → Add remote room sensor,
+# then paste the device token below.
+#
+# Wiring (same 10k NTC as SAT probes):
+#   3.3V -- 10k resistor -- GPIO36 (VP) -- thermistor -- GND
+#
+# Secrets live in secrets.yaml next to this file.
+
+substitutions:
+  name: west-wing-room
+  friendly_name: "West Wing Room"
+  convex_site: https://wary-tern-102.convex.site
+  device_token: "b024242088bbd3b87a3a1b5b4366c0f88b7102fa193653dc"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+logger:
+  level: INFO
+
+http_request:
+  id: ems_http
+  timeout: 10s
+  verify_ssl: true
+  follow_redirects: false
+
+web_server:
+  port: 80
+
+sensor:
+  - platform: adc
+    id: room_adc
+    pin: GPIO36
+    attenuation: 12db
+    update_interval: 5s
+    internal: true
+
+  - platform: resistance
+    id: room_ohm
+    name: Room Temp Resistance
+    sensor: room_adc
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+    entity_category: diagnostic
+
+  - platform: ntc
+    id: room_temp
+    name: Room Temp
+    sensor: room_ohm
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: mdi:thermometer
+    calibration:
+      b_constant: 3590
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    filters:
+      # ESPHome reading minus trusted thermometer (e.g. 24.0 - 21.5 = -2.5)
+      - offset: 2.75
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+      - clamp:
+          min_value: 8
+          max_value: 39.5
+          ignore_out_of_range: true
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 120s
+
+interval:
+  - interval: 20s
+    then:
+      - http_request.post:
+          url: ${convex_site}/remote-temp
+          request_headers:
+            Content-Type: application/json
+            X-Device-Token: ${device_token}
+          body: !lambda |-
+            char temp[16] = "null";
+            if (std::isfinite(id(room_temp).state))
+              snprintf(temp, sizeof(temp), "%.1f", id(room_temp).state);
+            char buf[192];
+            snprintf(
+                buf, sizeof(buf),
+                "{\"room_temp\":%s,\"token\":\"${device_token}\"}",
+                temp);
+            return std::string(buf);

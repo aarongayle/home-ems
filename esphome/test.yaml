@@ -185,9 +185,15 @@ interval:
             then:
               - lambda: |-
                   json::parse_json(body, [](JsonObject root) -> bool {
+                    if (!root["remote_temp"].isNull()) {
+                      float remote = root["remote_temp"].as<float>();
+                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f) {
+                        id(hp).set_remote_temperature(remote);
+                      }
+                    }
                     JsonArray cmds = root["commands"].as<JsonArray>();
                     if (!cmds) {
-                      return false;
+                      return true;
                     }
                     for (JsonObject cmd : cmds) {
                       auto call = id(hp).make_call();

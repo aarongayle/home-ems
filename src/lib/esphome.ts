@@ -8,9 +8,15 @@ function formatOffset(value: number): string {
 }
 
 const COMMAND_LAMBDA = `                  json::parse_json(body, [](JsonObject root) -> bool {
+                    if (!root["remote_temp"].isNull()) {
+                      float remote = root["remote_temp"].as<float>();
+                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f) {
+                        id(hp).set_remote_temperature(remote);
+                      }
+                    }
                     JsonArray cmds = root["commands"].as<JsonArray>();
                     if (!cmds) {
-                      return false;
+                      return true;
                     }
                     for (JsonObject cmd : cmds) {
                       auto call = id(hp).make_call();
@@ -278,3 +284,128 @@ ${ingestLambda(includeSat)}
 ${COMMAND_LAMBDA}
 `;
 }
+
+export function esphomeRemoteSensorSnippet(opts: {
+  slug: string;
+  name: string;
+  convexSiteUrl: string;
+  deviceToken: string;
+  offset?: number;
+}): string {
+  const offset = formatOffset(opts.offset ?? 0);
+
+  return `# Save as ${opts.slug}.yaml in ESPHome Device Builder.
+#
+# WiFi room sensor. Posts Celsius to Home EMS every 20s. The linked
+# mini split applies it as CN105 remote room temperature (no extra wire).
+# Secrets live in secrets.yaml next to this file.
+#
+# Wiring (same 10k NTC as SAT probes):
+#   3.3V -- 10k resistor -- GPIO36 (VP) -- thermistor -- GND
+
+substitutions:
+  name: ${opts.slug}
+  friendly_name: ${yamlString(opts.name)}
+  convex_site: ${opts.convexSiteUrl}
+  device_token: ${yamlString(opts.deviceToken)}
+
+esphome:
+  name: \${name}
+  friendly_name: \${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "\${friendly_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+logger:
+  level: INFO
+
+http_request:
+  id: ems_http
+  timeout: 10s
+  verify_ssl: true
+  follow_redirects: false
+
+web_server:
+  port: 80
+
+sensor:
+  - platform: adc
+    id: room_adc
+    pin: GPIO36
+    attenuation: 12db
+    update_interval: 5s
+    internal: true
+
+  - platform: resistance
+    id: room_ohm
+    name: Room Temp Resistance
+    sensor: room_adc
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+    entity_category: diagnostic
+
+  - platform: ntc
+    id: room_temp
+    name: Room Temp
+    sensor: room_ohm
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: mdi:thermometer
+    calibration:
+      b_constant: 3590
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    filters:
+      - offset: ${offset}
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+      - clamp:
+          min_value: 8
+          max_value: 39.5
+          ignore_out_of_range: true
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 120s
+
+interval:
+  - interval: 20s
+    then:
+      - http_request.post:
+          url: \${convex_site}/remote-temp
+          request_headers:
+            Content-Type: application/json
+            X-Device-Token: \${device_token}
+          body: !lambda |-
+            char temp[16] = "null";
+            if (std::isfinite(id(room_temp).state))
+              snprintf(temp, sizeof(temp), "%.1f", id(room_temp).state);
+            char buf[192];
+            snprintf(
+                buf, sizeof(buf),
+                "{\\"room_temp\\":%s,\\"token\\":\\"\${device_token}\\"}",
+                temp);
+            return std::string(buf);
+`;
+}
+

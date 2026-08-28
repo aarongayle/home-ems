@@ -17,6 +17,7 @@ import type * as lib_helpers from "../lib/helpers.js";
 import type * as lib_types from "../lib/types.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as readings from "../readings.js";
+import type * as remoteSensors from "../remoteSensors.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as units from "../units.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "lib/types": typeof lib_types;
   "lib/validators": typeof lib_validators;
   readings: typeof readings;
+  remoteSensors: typeof remoteSensors;
   seed: typeof seed;
   settings: typeof settings;
   units: typeof units;

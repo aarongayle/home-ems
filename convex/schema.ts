@@ -42,6 +42,9 @@ export default defineSchema({
     fanMode: fanModeValidator,
     hvacAction: hvacActionValidator,
     roomTempC: v.optional(v.number()),
+    internalTempC: v.optional(v.number()),
+    remoteTempC: v.optional(v.number()),
+    remoteTempAt: v.optional(v.number()),
     targetTempC: v.optional(v.number()),
     outdoorTempC: v.optional(v.number()),
     supplyAirTempC: v.optional(v.number()),
@@ -86,4 +89,19 @@ export default defineSchema({
   })
     .index("by_unit_and_status", ["unitId", "status"])
     .index("by_status", ["status"]),
+
+  remoteSensors: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    unitId: v.id("units"),
+    deviceTokenHash: v.string(),
+    online: v.boolean(),
+    lastSeenAt: v.optional(v.number()),
+    tempC: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_token_hash", ["deviceTokenHash"])
+    .index("by_unit", ["unitId"]),
 });
