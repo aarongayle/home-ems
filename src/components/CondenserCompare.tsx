@@ -5,8 +5,11 @@ import { useAuth } from "../lib/auth";
 import type { CondenserGroup } from "../lib/floorplan";
 import type { TemperatureUnit } from "../lib/format";
 import {
+  appendLiveTail,
   alignTrendReadings,
+  compactTrendReadings,
   loadSeries,
+  mergeHistoryAndTail,
   persistSeries,
   temperatureDomain,
   toggleSeries,
@@ -14,6 +17,7 @@ import {
   TrendSeriesLegend,
   withLiveReading,
   type SeriesId,
+  type TrendReading,
 } from "./TrendChart";
 import { UnitCard, type UnitCardData } from "./UnitCard";
 
@@ -34,6 +38,16 @@ const RANGE_MS: Record<RangeId, number> = {
   "24h": 24 * 60 * 60 * 1000,
   "7d": 7 * 24 * 60 * 60 * 1000,
 };
+
+function bucketMsForRange(rangeMs: number): number {
+  if (rangeMs <= 60 * 60 * 1000) {
+    return 45_000;
+  }
+  if (rangeMs <= 24 * 60 * 60 * 1000) {
+    return 5 * 60 * 1000;
+  }
+  return 15 * 60 * 1000;
+}
 
 type CompareUnit = UnitCardData & {
   lastSeenAt?: number;
@@ -64,9 +78,20 @@ export function CondenserCompare({
   const [range, setRange] = useState<RangeId>("24h");
   const [enabled, setEnabled] = useState<SeriesId[]>(loadSeries);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [tails, setTails] = useState<Record<string, TrendReading[]>>({});
   const rangeMs = RANGE_MS[range];
-  const startTs = useMemo(() => Date.now() - rangeMs, [rangeMs]);
-  const unitIds = useMemo(() => units.map((unit) => unit._id), [units]);
+  const bucketMs = bucketMsForRange(rangeMs);
+  const unitIdsKey = units.map((unit) => unit._id).join(",");
+  const unitIds = useMemo(() => {
+    if (unitIdsKey === "") {
+      return [];
+    }
+    return unitIdsKey.split(",") as Array<(typeof units)[number]["_id"]>;
+  }, [unitIdsKey]);
+  const window = useMemo(() => {
+    const endTs = Date.now();
+    return { startTs: endTs - rangeMs, endTs };
+  }, [rangeMs]);
 
   useEffect(() => {
     persistSeries(enabled);
@@ -74,20 +99,56 @@ export function CondenserCompare({
 
   useEffect(() => {
     setHoverIndex(null);
-  }, [groupKey, range, startTs]);
+    setTails({});
+  }, [groupKey, range, window.startTs, window.endTs, unitIdsKey]);
 
-  const bundles = useQuery(
+  const history = useQuery(
     api.readings.forUnits,
     unitIds.length > 0 && authArgs !== "skip"
       ? {
           ...authArgs,
           unitIds,
-          startTs,
-          // Open-ended so new samples stay in the live Convex subscription.
-          endTs: startTs + rangeMs * 100,
+          startTs: window.startTs,
+          // Frozen so new samples fall outside this range and do not
+          // re-read packed history. Live points come from latestForUnits.
+          endTs: window.endTs,
+          bucketMs,
         }
       : "skip",
   );
+  const latest = useQuery(
+    api.readings.latestForUnits,
+    unitIds.length > 0 && authArgs !== "skip"
+      ? { ...authArgs, unitIds }
+      : "skip",
+  );
+
+  useEffect(() => {
+    if (latest === undefined) {
+      return;
+    }
+    setTails((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const row of latest) {
+        const merged = compactTrendReadings(
+          appendLiveTail(next[row.unitId] ?? [], row.reading ?? undefined),
+          bucketMs,
+        );
+        const previous = next[row.unitId];
+        if (
+          merged.length > 0 &&
+          (previous === undefined ||
+            previous.length !== merged.length ||
+            previous.at(-1)?.ts !== merged.at(-1)?.ts)
+        ) {
+          next[row.unitId] = merged;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [bucketMs, latest]);
 
   const liveById = useMemo(
     () => new Map(units.map((unit) => [unit._id, unit])),
@@ -95,23 +156,30 @@ export function CondenserCompare({
   );
 
   const aligned = useMemo(() => {
-    if (bundles === undefined) return undefined;
+    if (history === undefined) return undefined;
     const byId = new Map(
-      bundles.map((bundle) => [
-        bundle.unitId,
-        withLiveReading(bundle.readings, liveById.get(bundle.unitId)),
-      ]),
+      history.map((bundle) => {
+        const merged = mergeHistoryAndTail(
+          bundle.readings,
+          tails[bundle.unitId] ?? [],
+          bucketMs,
+        );
+        return [
+          bundle.unitId,
+          withLiveReading(merged, liveById.get(bundle.unitId)),
+        ];
+      }),
     );
     const series = units.map((unit) => byId.get(unit._id) ?? []);
-    const latest = Math.max(
-      startTs + rangeMs,
+    const latestTs = Math.max(
+      window.startTs + rangeMs,
       ...series.flatMap((readings) => readings.map((row) => row.ts)),
     );
     return {
-      series: alignTrendReadings(series, startTs, latest),
-      xDomain: [startTs, latest] as [number, number],
+      series: alignTrendReadings(series, window.startTs, latestTs),
+      xDomain: [window.startTs, latestTs] as [number, number],
     };
-  }, [bundles, liveById, rangeMs, startTs, units]);
+  }, [bucketMs, history, liveById, rangeMs, tails, units, window.startTs]);
 
   const showSat = units.some((unit) => unit.supplyAirTempC !== undefined);
   const tempDomain = useMemo(
@@ -184,7 +252,7 @@ export function CondenserCompare({
             temperatureUnit={temperatureUnit}
             showTrends={false}
           />
-          {aligned === undefined || bundles === undefined ? (
+          {aligned === undefined || history === undefined ? (
             <p className="text-mist">Loading trend…</p>
           ) : (
             <TrendChart

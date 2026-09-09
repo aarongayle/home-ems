@@ -27,4 +27,10 @@ crons.interval(
   internal.readings.pruneOld,
 );
 
+crons.interval(
+  "backfill-reading-days",
+  { minutes: 5 },
+  internal.readings.backfillDays,
+);
+
 export default crons;

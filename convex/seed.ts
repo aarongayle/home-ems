@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { householdMutation } from "./lib/auth";
 import { sha256Hex } from "./lib/helpers";
+import { upsertReadingDay } from "./lib/series";
 import type { ClimateMode, HvacAction } from "./lib/types";
 
 const DEMO_UNITS: Array<{
@@ -125,8 +126,7 @@ export const demoHome = householdMutation({
         const t = (ts - now) / (60 * 60 * 1000);
         const swing = Math.sin(t / 3) * 1.2;
         const outdoorSwing = Math.sin((t + 4) / 5) * 4;
-        await ctx.db.insert("readings", {
-          unitId,
+        const sample = {
           ts,
           roomTempC: demo.base + swing,
           targetTempC: demo.target,
@@ -145,7 +145,12 @@ export const demoHome = householdMutation({
               : Math.max(40, demo.hz * 18 + Math.sin(t * 1.4) * 80),
           mode: demo.mode,
           hvacAction: demo.action,
+        };
+        await ctx.db.insert("readings", {
+          unitId,
+          ...sample,
         });
+        await upsertReadingDay(ctx, unitId, sample);
       }
       created += 1;
     }

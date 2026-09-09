@@ -78,6 +78,29 @@ export default defineSchema({
     .index("by_unit_and_ts", ["unitId", "ts"])
     .index("by_ts", ["ts"]),
 
+  // One compact document per unit per UTC day. Completed days are immutable;
+  // today's document is patched as samples arrive and must not be read by the
+  // frozen history subscription.
+  readingDays: defineTable({
+    unitId: v.id("units"),
+    dayStartTs: v.number(),
+    points: v.array(
+      v.object({
+        ts: v.number(),
+        roomTempC: v.optional(v.number()),
+        targetTempC: v.optional(v.number()),
+        outdoorTempC: v.optional(v.number()),
+        supplyAirTempC: v.optional(v.number()),
+        compressorHz: v.optional(v.number()),
+        inputPowerW: v.optional(v.number()),
+        mode: climateModeValidator,
+        hvacAction: hvacActionValidator,
+      }),
+    ),
+  })
+    .index("by_unit_and_day", ["unitId", "dayStartTs"])
+    .index("by_day", ["dayStartTs"]),
+
   commands: defineTable({
     unitId: v.id("units"),
     status: commandStatusValidator,

@@ -19,6 +19,7 @@ import {
   slugify,
   toPublicUnit,
 } from "./lib/helpers";
+import { upsertReadingDay } from "./lib/series";
 import {
   climateModeValidator,
   fanModeValidator,
@@ -415,8 +416,7 @@ export const applyReportedState = internalMutation({
     const shouldSample =
       unit.lastReadingAt === undefined || now - unit.lastReadingAt >= 45_000;
     if (shouldSample) {
-      await ctx.db.insert("readings", {
-        unitId: unit._id,
+      const sample = {
         ts: now,
         roomTempC: remoteFresh ? unit.remoteTempC : args.roomTempC,
         targetTempC: args.targetTempC ?? unit.targetTempC,
@@ -426,7 +426,12 @@ export const applyReportedState = internalMutation({
         inputPowerW: args.inputPowerW,
         mode,
         hvacAction,
+      };
+      await ctx.db.insert("readings", {
+        unitId: unit._id,
+        ...sample,
       });
+      await upsertReadingDay(ctx, unit._id, sample);
       await ctx.db.patch("units", unit._id, { lastReadingAt: now });
     }
 

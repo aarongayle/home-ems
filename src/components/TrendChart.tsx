@@ -115,6 +115,54 @@ type LiveSource = {
   hvacAction: HvacAction;
 };
 
+export function compactTrendReadings(
+  rows: TrendReading[],
+  bucketMs: number,
+): TrendReading[] {
+  if (bucketMs <= 1 || rows.length <= 1) {
+    return rows;
+  }
+  const buckets = new Map<number, TrendReading>();
+  for (const row of rows) {
+    const ts = Math.floor(row.ts / bucketMs) * bucketMs;
+    buckets.set(ts, { ...row, ts });
+  }
+  return [...buckets.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([, row]) => row);
+}
+
+/** Fold newly arrived samples onto frozen history without re-fetching it. */
+export function mergeHistoryAndTail(
+  history: TrendReading[],
+  tail: TrendReading[],
+  bucketMs: number,
+): TrendReading[] {
+  if (tail.length === 0) {
+    return history;
+  }
+  const cutoff = history.at(-1)?.ts ?? Number.NEGATIVE_INFINITY;
+  const newer = tail.filter((row) => row.ts > cutoff);
+  if (newer.length === 0) {
+    return history;
+  }
+  return compactTrendReadings([...history, ...newer], bucketMs);
+}
+
+export function appendLiveTail(
+  current: TrendReading[],
+  next: TrendReading | null | undefined,
+): TrendReading[] {
+  if (!next) {
+    return current;
+  }
+  const last = current.at(-1);
+  if (last !== undefined && next.ts <= last.ts) {
+    return current;
+  }
+  return [...current, next];
+}
+
 /** Keep the chart's latest point in sync with the live unit snapshot. */
 export function withLiveReading(
   readings: TrendReading[],

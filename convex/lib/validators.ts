@@ -105,6 +105,18 @@ export const readingValidator = v.object({
   hvacAction: hvacActionValidator,
 });
 
+export const chartReadingValidator = v.object({
+  ts: v.number(),
+  roomTempC: v.optional(v.number()),
+  targetTempC: v.optional(v.number()),
+  outdoorTempC: v.optional(v.number()),
+  supplyAirTempC: v.optional(v.number()),
+  compressorHz: v.optional(v.number()),
+  inputPowerW: v.optional(v.number()),
+  mode: climateModeValidator,
+  hvacAction: hvacActionValidator,
+});
+
 export const siteValidator = v.object({
   homeName: v.string(),
   temperatureUnit: temperatureUnitValidator,
