@@ -111,10 +111,11 @@ function ingestLambda(includeSat: boolean): string {
             char buf[768];
             snprintf(
                 buf, sizeof(buf),
-                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"supply_air_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\"}",
+                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"supply_air_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\",\\"host\\":\\"%s\\"}",
                 room, target, outdoor, sat_buf, hz, power,
                 LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
-                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
+                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)),
+                App.get_name().c_str());
             return std::string(buf);`;
   }
   return `            char room[16] = "null";
@@ -135,10 +136,11 @@ function ingestLambda(includeSat: boolean): string {
             char buf[768];
             snprintf(
                 buf, sizeof(buf),
-                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\"}",
+                "{\\"room_temp\\":%s,\\"target_temp\\":%s,\\"outdoor_temp\\":%s,\\"compressor_hz\\":%s,\\"input_power\\":%s,\\"mode\\":\\"%s\\",\\"hvac_action\\":\\"%s\\",\\"host\\":\\"%s\\"}",
                 room, target, outdoor, hz, power,
                 LOG_STR_ARG(climate::climate_mode_to_string(id(hp).mode)),
-                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)));
+                LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)),
+                App.get_name().c_str());
             return std::string(buf);`;
 }
 

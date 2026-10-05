@@ -24,6 +24,13 @@ function bearerToken(request: Request): string | undefined {
   return header.replace(/^Bearer\s+/i, "").trim() || undefined;
 }
 
+// ESPHome node names are lowercase letters, digits, and hyphens.
+function deviceHost(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const host = value.trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9-]{0,62}$/.test(host) ? host : undefined;
+}
+
 type IngestBody = {
   token?: unknown;
   slug?: unknown;
@@ -44,6 +51,7 @@ type IngestBody = {
   action?: unknown;
   vertical_vane?: unknown;
   horizontal_vane?: unknown;
+  host?: unknown;
 };
 
 http.route({
@@ -107,6 +115,7 @@ http.route({
           typeof body.horizontal_vane === "string"
             ? body.horizontal_vane
             : undefined,
+        host: deviceHost(body.host),
       });
       return json({ ok: true, ...result });
     } catch (error) {

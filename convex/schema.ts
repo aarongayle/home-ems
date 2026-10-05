@@ -53,6 +53,8 @@ export default defineSchema({
     energyKwh: v.optional(v.number()),
     verticalVane: v.optional(v.string()),
     horizontalVane: v.optional(v.string()),
+    // ESPHome node name, reported on ingest. Its web UI is http://<host>.local
+    deviceHost: v.optional(v.string()),
     minTempC: v.number(),
     maxTempC: v.number(),
     createdAt: v.number(),
