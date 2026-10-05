@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -18,6 +19,8 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 export type UnitCardData = {
   _id: Id<"units">;
+  slug: string;
+  deviceHost?: string;
   name: string;
   room: string;
   online: boolean;
@@ -37,6 +40,9 @@ export type UnitCardData = {
 
 const MODES: ClimateMode[] = ["off", "heat", "cool", "auto", "dry", "fan_only"];
 const FANS: FanMode[] = ["auto", "quiet", "low", "medium", "high"];
+
+// Taps within this window collapse into one setpoint command.
+const SETPOINT_SETTLE_MS = 800;
 
 export function UnitCard({
   unit,
@@ -64,9 +70,48 @@ export function UnitCard({
     });
   };
 
-  const target = unit.targetTempC ?? 21;
+  // Setpoint the user is tapping toward. Each tap steps from here rather than
+  // from the server value, which lags until the mutation round-trips.
+  const [draftTargetC, setDraftTargetC] = useState<number>();
+  const flushTarget = useRef<(() => void) | undefined>(undefined);
+  const settleTimer = useRef<number | undefined>(undefined);
+  const tapSeq = useRef(0);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(settleTimer.current);
+      flushTarget.current?.();
+    },
+    [],
+  );
+
+  const nudgeTarget = (direction: 1 | -1) => {
+    const base = draftTargetC ?? unit.targetTempC ?? 21;
+    const next = Math.min(
+      unit.maxTempC,
+      Math.max(unit.minTempC, stepTargetC(base, direction, temperatureUnit)),
+    );
+    setDraftTargetC(next);
+    const seq = ++tapSeq.current;
+    const send = () => {
+      flushTarget.current = undefined;
+      void setClimate({
+        sessionToken,
+        unitId: unit._id,
+        targetTempC: next,
+      }).finally(() => {
+        if (tapSeq.current === seq) setDraftTargetC(undefined);
+      });
+    };
+    flushTarget.current = send;
+    window.clearTimeout(settleTimer.current);
+    settleTimer.current = window.setTimeout(send, SETPOINT_SETTLE_MS);
+  };
+
+  const target = draftTargetC ?? unit.targetTempC ?? 21;
   const canCooler = target > unit.minTempC;
   const canWarmer = target < unit.maxTempC;
+  const deviceUrl = `http://${unit.deviceHost ?? unit.slug}.local/`;
 
   return (
     <section className="flex flex-col border border-line bg-panel">
@@ -83,7 +128,7 @@ export function UnitCard({
           >
             {unit.online ? ACTION_LABELS[unit.hvacAction] : "Offline"}
           </p>
-          {unit.pendingCommandCount > 0 && (
+          {(unit.pendingCommandCount > 0 || draftTargetC !== undefined) && (
             <p className="font-mono text-[11px] text-heat">Calling</p>
           )}
         </div>
@@ -125,22 +170,22 @@ export function UnitCard({
             <button
               type="button"
               disabled={!canCooler}
-              onClick={() =>
-                run({ targetTempC: stepTargetC(target, -1, temperatureUnit) })
-              }
+              onClick={() => nudgeTarget(-1)}
               className="h-8 w-8 border border-line text-lg text-mist hover:text-paper disabled:opacity-30"
             >
               −
             </button>
             <span className="font-mono text-3xl">
-              {displayTemp(unit.targetTempC, temperatureUnit, 0)}
+              {displayTemp(
+                draftTargetC ?? unit.targetTempC,
+                temperatureUnit,
+                0,
+              )}
             </span>
             <button
               type="button"
               disabled={!canWarmer}
-              onClick={() =>
-                run({ targetTempC: stepTargetC(target, 1, temperatureUnit) })
-              }
+              onClick={() => nudgeTarget(1)}
               className="h-8 w-8 border border-line text-lg text-mist hover:text-paper disabled:opacity-30"
             >
               +
@@ -190,6 +235,15 @@ export function UnitCard({
               {Math.round(unit.compressorHz)} Hz
             </span>
           )}
+          <a
+            href={deviceUrl}
+            target="_blank"
+            rel="noreferrer"
+            title={`ESPHome web UI (${deviceUrl}) — home network only`}
+            className="font-mono text-[11px] uppercase tracking-widest text-mist hover:text-paper"
+          >
+            Device
+          </a>
           {showTrends && (
             <Link
               to={`/unit/${unit._id}`}

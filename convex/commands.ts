@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import {
   climateModeValidator,
@@ -31,26 +32,37 @@ export const claimQueued = internalMutation({
       throw new Error("Unknown device token");
     }
 
+    // Index order is creation order. Rapid taps queue several commands; fold
+    // them into one so the ESP only performs the newest value per field.
     const queued = await ctx.db
       .query("commands")
       .withIndex("by_unit_and_status", (q) =>
         q.eq("unitId", unit._id).eq("status", "queued"),
       )
-      .take(10);
+      .take(50);
 
     const now = Date.now();
     const commands = [];
+    let lastId: Id<"commands"> | undefined;
+    const merged: {
+      mode?: Doc<"commands">["mode"];
+      target_temp?: number;
+      fan_mode?: Doc<"commands">["fanMode"];
+    } = {};
     for (const command of queued) {
       await ctx.db.patch("commands", command._id, {
         status: "sent",
         sentAt: now,
       });
-      commands.push({
-        id: command._id,
-        mode: command.mode,
-        target_temp: command.targetTempC,
-        fan_mode: command.fanMode,
-      });
+      lastId = command._id;
+      if (command.mode !== undefined) merged.mode = command.mode;
+      if (command.targetTempC !== undefined) {
+        merged.target_temp = command.targetTempC;
+      }
+      if (command.fanMode !== undefined) merged.fan_mode = command.fanMode;
+    }
+    if (lastId !== undefined) {
+      commands.push({ id: lastId, ...merged });
     }
 
     await ctx.db.patch("units", unit._id, {

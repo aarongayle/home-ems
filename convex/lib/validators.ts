@@ -85,6 +85,7 @@ export const unitPublicValidator = v.object({
   energyKwh: v.optional(v.number()),
   verticalVane: v.optional(v.string()),
   horizontalVane: v.optional(v.string()),
+  deviceHost: v.optional(v.string()),
   minTempC: v.number(),
   maxTempC: v.number(),
   pendingCommandCount: v.number(),

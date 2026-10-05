@@ -54,6 +54,7 @@ Demo units cannot be controlled by a real ESP32. Remove them and create units wi
 - UART is 2400 baud; TX/RX pins depend on the board. See the MitsubishiCN105ESPHome README.
 - `outside_air_temperature_sensor` is not supported on every outdoor unit. Some report -63.5 °C when idle; Home EMS drops that as invalid.
 - Keep `web_server` enabled so you can still change setpoints on the LAN.
+- Each zone card has a **Device** link to `http://<esphome-name>.local/`. The ESP reports its name on ingest; until it does, the link uses the dashboard slug. It only opens from the home network.
 
 ## Data
 

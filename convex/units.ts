@@ -330,6 +330,7 @@ export const applyReportedState = internalMutation({
     hvacAction: v.optional(v.string()),
     verticalVane: v.optional(v.string()),
     horizontalVane: v.optional(v.string()),
+    host: v.optional(v.string()),
   },
   returns: v.object({
     unitId: v.id("units"),
@@ -347,8 +348,27 @@ export const applyReportedState = internalMutation({
     // can differ from the dashboard slug (e.g. mil-suite vs mother-in-law-s-suite).
 
     const now = Date.now();
-    const mode = parseClimateMode(args.mode) ?? unit.mode;
-    const fanMode = parseFanMode(args.fanMode) ?? unit.fanMode;
+    // The ESP posts state before it polls commands, so a report can still carry
+    // the old value for anything queued. Keep the dashboard's value until the
+    // command reaches the unit, or the next tap steps from a stale setpoint.
+    const queued = await ctx.db
+      .query("commands")
+      .withIndex("by_unit_and_status", (q) =>
+        q.eq("unitId", unit._id).eq("status", "queued"),
+      )
+      .take(50);
+    const holdMode = queued.some((command) => command.mode !== undefined);
+    const holdFan = queued.some((command) => command.fanMode !== undefined);
+    const holdTarget = queued.some(
+      (command) => command.targetTempC !== undefined,
+    );
+
+    const mode = holdMode
+      ? unit.mode
+      : (parseClimateMode(args.mode) ?? unit.mode);
+    const fanMode = holdFan
+      ? unit.fanMode
+      : (parseFanMode(args.fanMode) ?? unit.fanMode);
     const hvacAction = parseHvacAction(args.hvacAction) ?? unit.hvacAction;
 
     const reportedPatch: {
@@ -368,6 +388,7 @@ export const applyReportedState = internalMutation({
       energyKwh?: number;
       verticalVane?: string;
       horizontalVane?: string;
+      deviceHost?: string;
     } = {
       online: true,
       lastSeenAt: now,
@@ -388,7 +409,12 @@ export const applyReportedState = internalMutation({
     } else if (args.roomTempC !== undefined) {
       reportedPatch.roomTempC = args.roomTempC;
     }
-    if (args.targetTempC !== undefined) reportedPatch.targetTempC = args.targetTempC;
+    if (args.targetTempC !== undefined && !holdTarget) {
+      reportedPatch.targetTempC = args.targetTempC;
+    }
+    if (args.host !== undefined && args.host !== unit.deviceHost) {
+      reportedPatch.deviceHost = args.host;
+    }
     if (args.outdoorTempC !== undefined) reportedPatch.outdoorTempC = args.outdoorTempC;
     const supplyAirTempC = exceedsDeadband(
       args.supplyAirTempC,
