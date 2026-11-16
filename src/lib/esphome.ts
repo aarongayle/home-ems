@@ -235,6 +235,10 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '0'
+  - id: poll_fail_streak
+    type: uint8_t
+    restore_value: no
+    initial_value: '0'
   - id: remote_sent_at
     type: uint32_t
     restore_value: no
@@ -277,15 +281,21 @@ ${ingestLambda(includeSat)}
           max_response_buffer_size: 1kB
           request_headers:
             Authorization: Bearer \${device_token}
+          # Back off 4s, 8s, 16s, then 32s while the server is unreachable,
+          # so a down server can't keep stalling the main loop.
           on_error:
-            - lambda: 'id(poll_backoff_until) = millis() + 30000;'
+            - lambda: |-
+                id(poll_fail_streak) = std::min<uint8_t>(id(poll_fail_streak) + 1, 4);
+                id(poll_backoff_until) = millis() + (2000u << id(poll_fail_streak));
           on_response:
             then:
               - lambda: |-
                   if (response->status_code != 200) {
-                    id(poll_backoff_until) = millis() + 30000;
+                    id(poll_fail_streak) = std::min<uint8_t>(id(poll_fail_streak) + 1, 4);
+                    id(poll_backoff_until) = millis() + (2000u << id(poll_fail_streak));
                     return;
                   }
+                  id(poll_fail_streak) = 0;
                   bool applied = false;
                   json::parse_json(body, [&applied](JsonObject root) -> bool {
                     if (!root["remote_temp"].isNull()) {
