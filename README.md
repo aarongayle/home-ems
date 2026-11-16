@@ -54,6 +54,9 @@ Demo units cannot be controlled by a real ESP32. Remove them and create units wi
 - UART is 2400 baud; TX/RX pins depend on the board. See the MitsubishiCN105ESPHome README.
 - `outside_air_temperature_sensor` is not supported on every outdoor unit. Some report -63.5 °C when idle; Home EMS drops that as invalid.
 - Keep `web_server` enabled so you can still change setpoints on the LAN.
+- The repo is public, so device tokens live in `esphome/secrets.yaml` (gitignored) as `token_<node_name>`. See `esphome/secrets.yaml.example`.
+- Commands: units poll `/commands` every 2s over plain HTTP on the LAN (`convex_site: http://<server-ip>:3211`) and report state right after applying one, so a tap confirms in about 2-5s. Over HTTPS the generated YAML polls every 10s, since each request is a TLS handshake.
+- The dashboard holds a changed value until the unit reports it back ("Sending…", then "Unit applying…", then "✓ Set"). If the unit doesn't report it within 60s, its own value wins and the card says "Not applied".
 - Each zone card has a **Device** link to `http://<esphome-name>.local/`. The ESP reports its name on ingest; until it does, the link uses the dashboard slug. It only opens from the home network.
 
 ## Data

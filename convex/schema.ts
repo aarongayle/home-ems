@@ -111,6 +111,7 @@ export default defineSchema({
     fanMode: v.optional(fanModeValidator),
     createdAt: v.number(),
     sentAt: v.optional(v.number()),
+    ackedAt: v.optional(v.number()),
   })
     .index("by_unit_and_status", ["unitId", "status"])
     .index("by_status", ["status"]),
