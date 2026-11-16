@@ -10,8 +10,8 @@
 substitutions:
   name: west-wing-room
   friendly_name: "West Wing Room"
-  convex_site: https://wary-tern-102.convex.site
-  device_token: "b024242088bbd3b87a3a1b5b4366c0f88b7102fa193653dc"
+  convex_site: http://192.168.40.5:3211
+  device_token: !secret token_west_wing_room
 
 esphome:
   name: ${name}

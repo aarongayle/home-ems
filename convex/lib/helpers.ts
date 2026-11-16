@@ -1,4 +1,5 @@
 import type { Doc } from "../_generated/dataModel";
+import type { PendingState } from "./commands";
 import type {
   ClimateMode,
   FanMode,
@@ -192,6 +193,7 @@ export function parseHvacAction(value: unknown): HvacAction | undefined {
 
 export function toPublicUnit(
   unit: Doc<"units">,
+  pending: PendingState | undefined,
   pendingCommandCount: number,
   remoteSensor?: Doc<"remoteSensors"> | null,
 ) {
@@ -199,6 +201,7 @@ export function toPublicUnit(
   return {
     ...rest,
     pendingCommandCount,
+    pending,
     remoteSensor: remoteSensor
       ? {
           _id: remoteSensor._id,

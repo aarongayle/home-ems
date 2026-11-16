@@ -32,7 +32,18 @@ export const hvacActionValidator = v.union(
 export const commandStatusValidator = v.union(
   v.literal("queued"),
   v.literal("sent"),
+  // The unit reported the commanded values.
   v.literal("acked"),
+  // Claimed, but the unit never reported the values within the timeout.
+  v.literal("expired"),
+  // A newer command set the same fields before this one was confirmed.
+  v.literal("superseded"),
+);
+
+export const commandFieldValidator = v.union(
+  v.literal("mode"),
+  v.literal("targetTempC"),
+  v.literal("fanMode"),
 );
 
 export const temperatureUnitValidator = v.union(
@@ -89,6 +100,14 @@ export const unitPublicValidator = v.object({
   minTempC: v.number(),
   maxTempC: v.number(),
   pendingCommandCount: v.number(),
+  // Unconfirmed changes: "queued" until the unit polls, then "sent" until it
+  // reports the new values.
+  pending: v.optional(
+    v.object({
+      stage: v.union(v.literal("queued"), v.literal("sent")),
+      fields: v.array(commandFieldValidator),
+    }),
+  ),
   createdAt: v.number(),
   updatedAt: v.number(),
 });

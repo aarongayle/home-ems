@@ -7,8 +7,8 @@
 substitutions:
   name: mil-suite
   friendly_name: Mother-in-Law's Suite
-  convex_site: https://wary-tern-102.convex.site
-  device_token: "d041832b4a714538cfe09a28bb4e1de54fcdbb483bf6b4cb"
+  convex_site: http://192.168.40.5:3211
+  device_token: !secret token_mil_suite
 
 esphome:
   name: ${name}
@@ -63,7 +63,7 @@ logger:
 
 http_request:
   id: ems_http
-  timeout: 10s
+  timeout: 4s
   verify_ssl: true
 
 web_server:
@@ -152,8 +152,24 @@ climate:
       name: HVAC Error
       entity_category: diagnostic
 
-interval:
-  - interval: 20s
+globals:
+  - id: poll_backoff_until
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: remote_sent_at
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: remote_sent_c
+    type: float
+    restore_value: no
+    initial_value: 'NAN'
+
+script:
+  # Telemetry. Runs every 20s and right after a command is applied.
+  - id: post_state
+    mode: single
     then:
       - http_request.post:
           url: ${convex_site}/ingest
@@ -188,20 +204,50 @@ interval:
                 LOG_STR_ARG(climate::climate_action_to_string(id(hp).action)),
                 App.get_name().c_str());
             return std::string(buf);
+  # Report twice after a command so the dashboard confirms it quickly, even
+  # if the indoor unit takes a moment to echo the new state.
+  - id: confirm_state
+    mode: restart
+    then:
+      - delay: 1500ms
+      - script.wait: post_state
+      - script.execute: post_state
+      - delay: 4s
+      - script.wait: post_state
+      - script.execute: post_state
 
+  - id: poll_commands
+    mode: single
+    then:
       - http_request.get:
           url: ${convex_site}/commands
           capture_response: true
+          max_response_buffer_size: 1kB
           request_headers:
             Authorization: Bearer ${device_token}
+          on_error:
+            - lambda: 'id(poll_backoff_until) = millis() + 30000;'
           on_response:
             then:
               - lambda: |-
-                  json::parse_json(body, [](JsonObject root) -> bool {
+                  if (response->status_code != 200) {
+                    id(poll_backoff_until) = millis() + 30000;
+                    return;
+                  }
+                  bool applied = false;
+                  json::parse_json(body, [&applied](JsonObject root) -> bool {
                     if (!root["remote_temp"].isNull()) {
                       float remote = root["remote_temp"].as<float>();
-                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f) {
+                      uint32_t now = millis();
+                      // The climate component keeps the value alive; only
+                      // resend on change or once a minute.
+                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f &&
+                          (!std::isfinite(id(remote_sent_c)) ||
+                           fabsf(remote - id(remote_sent_c)) >= 0.05f ||
+                           now - id(remote_sent_at) >= 60000)) {
                         id(hp).set_remote_temperature(remote);
+                        id(remote_sent_c) = remote;
+                        id(remote_sent_at) = now;
                       }
                     }
                     JsonArray cmds = root["commands"].as<JsonArray>();
@@ -232,6 +278,25 @@ interval:
                         else if (strcmp(fan, "high") == 0) call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
                       }
                       call.perform();
+                      applied = true;
                     }
                     return true;
                   });
+                  if (applied) {
+                    id(confirm_state).execute();
+                  }
+
+interval:
+  - interval: 20s
+    then:
+      - script.execute: post_state
+  # Commands arrive within ~2s of a tap. Idle polls are tiny and stay on the LAN.
+  - interval: 2s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return !id(poll_commands).is_running() &&
+                     (int32_t) (millis() - id(poll_backoff_until)) >= 0;
+          then:
+            - script.execute: poll_commands

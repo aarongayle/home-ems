@@ -65,10 +65,19 @@ export const claimQueued = internalMutation({
       commands.push({ id: lastId, ...merged });
     }
 
-    await ctx.db.patch("units", unit._id, {
-      online: true,
-      lastSeenAt: now,
-    });
+    // Units poll every few seconds. Only write when the unit was marked
+    // offline or ingest has gone quiet, so idle polls don't re-run every
+    // dashboard subscription.
+    if (
+      !unit.online ||
+      unit.lastSeenAt === undefined ||
+      now - unit.lastSeenAt > 30_000
+    ) {
+      await ctx.db.patch("units", unit._id, {
+        online: true,
+        lastSeenAt: now,
+      });
+    }
 
     const remoteFresh =
       unit.remoteTempC !== undefined &&

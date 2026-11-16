@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { OptimisticLocalStore } from "convex/browser";
 import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -34,9 +35,61 @@ export type UnitCardData = {
   supplyAirTempC?: number;
   compressorHz?: number;
   pendingCommandCount: number;
+  pending?: PendingChange;
   minTempC: number;
   maxTempC: number;
 };
+
+type PendingField = "mode" | "targetTempC" | "fanMode";
+type PendingChange = { stage: "queued" | "sent"; fields: PendingField[] };
+type ClimatePatch = {
+  mode?: ClimateMode;
+  targetTempC?: number;
+  fanMode?: FanMode;
+};
+
+// How long "Set" / "Not applied" stays up after a change settles.
+const OUTCOME_MS = 4000;
+
+// Show the change on every unit list the moment it's tapped, instead of
+// waiting for the mutation round trip.
+function applyOptimisticClimate(
+  store: OptimisticLocalStore,
+  args: { unitId: Id<"units"> } & ClimatePatch,
+) {
+  const fields: PendingField[] = [];
+  if (args.mode !== undefined) fields.push("mode");
+  if (args.targetTempC !== undefined) fields.push("targetTempC");
+  if (args.fanMode !== undefined) fields.push("fanMode");
+  for (const { args: queryArgs, value } of store.getAllQueries(api.units.list)) {
+    if (!value) continue;
+    store.setQuery(
+      api.units.list,
+      queryArgs,
+      value.map((unit) => {
+        if (unit._id !== args.unitId) return unit;
+        const targetTempC =
+          args.targetTempC === undefined
+            ? unit.targetTempC
+            : Math.min(
+                unit.maxTempC,
+                Math.max(unit.minTempC, Math.round(args.targetTempC * 2) / 2),
+              );
+        return {
+          ...unit,
+          mode: args.mode ?? unit.mode,
+          fanMode: args.fanMode ?? unit.fanMode,
+          targetTempC,
+          pendingCommandCount: unit.pendingCommandCount + 1,
+          pending: {
+            stage: "queued" as const,
+            fields: [...new Set([...(unit.pending?.fields ?? []), ...fields])],
+          },
+        };
+      }),
+    );
+  }
+}
 
 const MODES: ClimateMode[] = ["off", "heat", "cool", "auto", "dry", "fan_only"];
 const FANS: FanMode[] = ["auto", "quiet", "low", "medium", "high"];
@@ -54,20 +107,31 @@ export function UnitCard({
   showTrends?: boolean;
 }) {
   const { authArgs } = useAuth();
-  const setClimate = useMutation(api.units.setClimate);
+  const setClimate = useMutation(api.units.setClimate).withOptimisticUpdate(
+    applyOptimisticClimate,
+  );
   const sessionToken =
     authArgs === "skip" ? undefined : authArgs.sessionToken;
 
-  const run = (patch: {
-    mode?: ClimateMode;
-    targetTempC?: number;
-    fanMode?: FanMode;
-  }) => {
-    void setClimate({
+  // What the user last asked for, to tell "Set" from "Not applied" once the
+  // unit settles.
+  const requested = useRef<ClimatePatch>({});
+  const [outcome, setOutcome] = useState<"set" | "rejected">();
+  const outcomeTimer = useRef<number | undefined>(undefined);
+
+  const sendClimate = (patch: ClimatePatch) => {
+    requested.current = { ...requested.current, ...patch };
+    window.clearTimeout(outcomeTimer.current);
+    setOutcome(undefined);
+    return setClimate({
       sessionToken,
       unitId: unit._id,
       ...patch,
     });
+  };
+
+  const run = (patch: ClimatePatch) => {
+    void sendClimate(patch);
   };
 
   // Setpoint the user is tapping toward. Each tap steps from here rather than
@@ -95,11 +159,7 @@ export function UnitCard({
     const seq = ++tapSeq.current;
     const send = () => {
       flushTarget.current = undefined;
-      void setClimate({
-        sessionToken,
-        unitId: unit._id,
-        targetTempC: next,
-      }).finally(() => {
+      void sendClimate({ targetTempC: next }).finally(() => {
         if (tapSeq.current === seq) setDraftTargetC(undefined);
       });
     };
@@ -107,6 +167,44 @@ export function UnitCard({
     window.clearTimeout(settleTimer.current);
     settleTimer.current = window.setTimeout(send, SETPOINT_SETTLE_MS);
   };
+
+  // When the last pending change clears, say whether the unit took it.
+  const isPending = unit.pending !== undefined;
+  const wasPending = useRef(isPending);
+  useEffect(() => {
+    const settled = wasPending.current && !isPending;
+    wasPending.current = isPending;
+    if (!settled) return;
+    const asked = requested.current;
+    requested.current = {};
+    if (Object.keys(asked).length === 0) return;
+    const took =
+      (asked.mode === undefined || asked.mode === unit.mode) &&
+      (asked.fanMode === undefined || asked.fanMode === unit.fanMode) &&
+      (asked.targetTempC === undefined ||
+        (unit.targetTempC !== undefined &&
+          Math.abs(asked.targetTempC - unit.targetTempC) < 0.3));
+    setOutcome(took ? "set" : "rejected");
+    window.clearTimeout(outcomeTimer.current);
+    outcomeTimer.current = window.setTimeout(
+      () => setOutcome(undefined),
+      OUTCOME_MS,
+    );
+  }, [isPending, unit.mode, unit.fanMode, unit.targetTempC]);
+  useEffect(() => () => window.clearTimeout(outcomeTimer.current), []);
+
+  const pendingField = (field: PendingField) =>
+    unit.pending?.fields.includes(field) ?? false;
+  const status =
+    draftTargetC !== undefined || unit.pending?.stage === "queued"
+      ? { text: "Sending…", tone: "text-heat" }
+      : unit.pending?.stage === "sent"
+        ? { text: "Unit applying…", tone: "text-heat" }
+        : outcome === "set"
+          ? { text: "✓ Set", tone: "text-ok" }
+          : outcome === "rejected"
+            ? { text: "Not applied", tone: "text-warn" }
+            : undefined;
 
   const target = draftTargetC ?? unit.targetTempC ?? 21;
   const canCooler = target > unit.minTempC;
@@ -128,8 +226,13 @@ export function UnitCard({
           >
             {unit.online ? ACTION_LABELS[unit.hvacAction] : "Offline"}
           </p>
-          {(unit.pendingCommandCount > 0 || draftTargetC !== undefined) && (
-            <p className="font-mono text-[11px] text-heat">Calling</p>
+          {status && (
+            <p
+              role="status"
+              className={`font-mono text-[11px] ${status.tone}`}
+            >
+              {status.text}
+            </p>
           )}
         </div>
       </div>
@@ -175,7 +278,13 @@ export function UnitCard({
             >
               −
             </button>
-            <span className="font-mono text-3xl">
+            <span
+              className={`font-mono text-3xl ${
+                draftTargetC !== undefined || pendingField("targetTempC")
+                  ? "animate-pulse text-heat"
+                  : ""
+              }`}
+            >
               {displayTemp(
                 draftTargetC ?? unit.targetTempC,
                 temperatureUnit,
@@ -202,7 +311,9 @@ export function UnitCard({
             onClick={() => run({ mode })}
             className={`px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide ${
               unit.mode === mode
-                ? "bg-paper text-ink"
+                ? pendingField("mode")
+                  ? "animate-pulse bg-heat text-ink"
+                  : "bg-paper text-ink"
                 : "border border-line text-mist hover:text-paper"
             }`}
           >
@@ -222,7 +333,9 @@ export function UnitCard({
             onClick={() => run({ fanMode })}
             className={`px-2 py-1 font-mono text-[11px] uppercase ${
               unit.fanMode === fanMode
-                ? "bg-panel-2 text-paper"
+                ? pendingField("fanMode")
+                  ? "animate-pulse bg-panel-2 text-heat"
+                  : "bg-panel-2 text-paper"
                 : "text-mist hover:text-paper"
             }`}
           >

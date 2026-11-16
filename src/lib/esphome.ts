@@ -7,45 +7,6 @@ function formatOffset(value: number): string {
   return String(value);
 }
 
-const COMMAND_LAMBDA = `                  json::parse_json(body, [](JsonObject root) -> bool {
-                    if (!root["remote_temp"].isNull()) {
-                      float remote = root["remote_temp"].as<float>();
-                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f) {
-                        id(hp).set_remote_temperature(remote);
-                      }
-                    }
-                    JsonArray cmds = root["commands"].as<JsonArray>();
-                    if (!cmds) {
-                      return true;
-                    }
-                    for (JsonObject cmd : cmds) {
-                      auto call = id(hp).make_call();
-                      const char *mode = cmd["mode"].as<const char *>();
-                      if (mode) {
-                        if (strcmp(mode, "off") == 0) call.set_mode(climate::CLIMATE_MODE_OFF);
-                        else if (strcmp(mode, "heat") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT);
-                        else if (strcmp(mode, "cool") == 0) call.set_mode(climate::CLIMATE_MODE_COOL);
-                        else if (strcmp(mode, "auto") == 0) call.set_mode(climate::CLIMATE_MODE_AUTO);
-                        else if (strcmp(mode, "dry") == 0) call.set_mode(climate::CLIMATE_MODE_DRY);
-                        else if (strcmp(mode, "fan_only") == 0) call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
-                        else if (strcmp(mode, "heat_cool") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT_COOL);
-                      }
-                      if (!cmd["target_temp"].isNull()) {
-                        call.set_target_temperature(cmd["target_temp"].as<float>());
-                      }
-                      const char *fan = cmd["fan_mode"].as<const char *>();
-                      if (fan) {
-                        if (strcmp(fan, "auto") == 0) call.set_fan_mode(climate::CLIMATE_FAN_AUTO);
-                        else if (strcmp(fan, "quiet") == 0) call.set_fan_mode(climate::CLIMATE_FAN_QUIET);
-                        else if (strcmp(fan, "low") == 0) call.set_fan_mode(climate::CLIMATE_FAN_LOW);
-                        else if (strcmp(fan, "medium") == 0) call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
-                        else if (strcmp(fan, "high") == 0) call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
-                      }
-                      call.perform();
-                    }
-                    return true;
-                  });`;
-
 function satBlock(offset: string): string {
   return `
 # 10k NTC, B=3590. Voltage divider (DOWNSTREAM):
@@ -154,6 +115,11 @@ export function esphomeSnippet(opts: {
 }): string {
   const includeSat = opts.includeSat === true;
   const satOffset = formatOffset(opts.satOffset ?? 0);
+  // Plain HTTP on the LAN is cheap to poll every 2s. Over HTTPS each poll is
+  // a TLS handshake that stalls the ESP's main loop, so poll less often.
+  const plainHttp = opts.convexSiteUrl.startsWith("http://");
+  const pollInterval = plainHttp ? "2s" : "10s";
+  const httpTimeout = plainHttp ? "4s" : "10s";
 
   return `# Save as ${opts.slug}.yaml in ESPHome Device Builder.
 #
@@ -213,7 +179,7 @@ logger:
 
 http_request:
   id: ems_http
-  timeout: 10s
+  timeout: ${httpTimeout}
   verify_ssl: true
 
 web_server:
@@ -264,8 +230,24 @@ climate:
       name: HVAC Error
       entity_category: diagnostic
 
-interval:
-  - interval: 20s
+globals:
+  - id: poll_backoff_until
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: remote_sent_at
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: remote_sent_c
+    type: float
+    restore_value: no
+    initial_value: 'NAN'
+
+script:
+  # Telemetry. Runs every 20s and right after a command is applied.
+  - id: post_state
+    mode: single
     then:
       - http_request.post:
           url: \${convex_site}/ingest
@@ -274,16 +256,102 @@ interval:
             Authorization: Bearer \${device_token}
           body: !lambda |-
 ${ingestLambda(includeSat)}
+  # Report twice after a command so the dashboard confirms it quickly, even
+  # if the indoor unit takes a moment to echo the new state.
+  - id: confirm_state
+    mode: restart
+    then:
+      - delay: 1500ms
+      - script.wait: post_state
+      - script.execute: post_state
+      - delay: 4s
+      - script.wait: post_state
+      - script.execute: post_state
 
+  - id: poll_commands
+    mode: single
+    then:
       - http_request.get:
           url: \${convex_site}/commands
           capture_response: true
+          max_response_buffer_size: 1kB
           request_headers:
             Authorization: Bearer \${device_token}
+          on_error:
+            - lambda: 'id(poll_backoff_until) = millis() + 30000;'
           on_response:
             then:
               - lambda: |-
-${COMMAND_LAMBDA}
+                  if (response->status_code != 200) {
+                    id(poll_backoff_until) = millis() + 30000;
+                    return;
+                  }
+                  bool applied = false;
+                  json::parse_json(body, [&applied](JsonObject root) -> bool {
+                    if (!root["remote_temp"].isNull()) {
+                      float remote = root["remote_temp"].as<float>();
+                      uint32_t now = millis();
+                      // The climate component keeps the value alive; only
+                      // resend on change or once a minute.
+                      if (std::isfinite(remote) && remote >= 8.0f && remote <= 39.5f &&
+                          (!std::isfinite(id(remote_sent_c)) ||
+                           fabsf(remote - id(remote_sent_c)) >= 0.05f ||
+                           now - id(remote_sent_at) >= 60000)) {
+                        id(hp).set_remote_temperature(remote);
+                        id(remote_sent_c) = remote;
+                        id(remote_sent_at) = now;
+                      }
+                    }
+                    JsonArray cmds = root["commands"].as<JsonArray>();
+                    if (!cmds) {
+                      return true;
+                    }
+                    for (JsonObject cmd : cmds) {
+                      auto call = id(hp).make_call();
+                      const char *mode = cmd["mode"].as<const char *>();
+                      if (mode) {
+                        if (strcmp(mode, "off") == 0) call.set_mode(climate::CLIMATE_MODE_OFF);
+                        else if (strcmp(mode, "heat") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT);
+                        else if (strcmp(mode, "cool") == 0) call.set_mode(climate::CLIMATE_MODE_COOL);
+                        else if (strcmp(mode, "auto") == 0) call.set_mode(climate::CLIMATE_MODE_AUTO);
+                        else if (strcmp(mode, "dry") == 0) call.set_mode(climate::CLIMATE_MODE_DRY);
+                        else if (strcmp(mode, "fan_only") == 0) call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
+                        else if (strcmp(mode, "heat_cool") == 0) call.set_mode(climate::CLIMATE_MODE_HEAT_COOL);
+                      }
+                      if (!cmd["target_temp"].isNull()) {
+                        call.set_target_temperature(cmd["target_temp"].as<float>());
+                      }
+                      const char *fan = cmd["fan_mode"].as<const char *>();
+                      if (fan) {
+                        if (strcmp(fan, "auto") == 0) call.set_fan_mode(climate::CLIMATE_FAN_AUTO);
+                        else if (strcmp(fan, "quiet") == 0) call.set_fan_mode(climate::CLIMATE_FAN_QUIET);
+                        else if (strcmp(fan, "low") == 0) call.set_fan_mode(climate::CLIMATE_FAN_LOW);
+                        else if (strcmp(fan, "medium") == 0) call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
+                        else if (strcmp(fan, "high") == 0) call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
+                      }
+                      call.perform();
+                      applied = true;
+                    }
+                    return true;
+                  });
+                  if (applied) {
+                    id(confirm_state).execute();
+                  }
+
+interval:
+  - interval: 20s
+    then:
+      - script.execute: post_state
+  # Commands arrive within one poll of a tap. Idle polls are tiny.
+  - interval: ${pollInterval}
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return !id(poll_commands).is_running() &&
+                     (int32_t) (millis() - id(poll_backoff_until)) >= 0;
+          then:
+            - script.execute: poll_commands
 `;
 }
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   internalMutation,
   type MutationCtx,
@@ -19,6 +19,12 @@ import {
   slugify,
   toPublicUnit,
 } from "./lib/helpers";
+import {
+  commandFields,
+  loadOpenCommands,
+  pendingState,
+  type CommandField,
+} from "./lib/commands";
 import { upsertReadingDay } from "./lib/series";
 import {
   climateModeValidator,
@@ -37,21 +43,30 @@ async function remoteSensorForUnit(
     .unique();
 }
 
+async function publicUnitWithPending(
+  ctx: QueryCtx,
+  unit: Doc<"units">,
+  now: number,
+) {
+  const { queued, liveSent } = await loadOpenCommands(ctx, unit._id, now);
+  const remoteSensor = await remoteSensorForUnit(ctx, unit._id);
+  return toPublicUnit(
+    unit,
+    pendingState(queued, liveSent),
+    queued.length + liveSent.length,
+    remoteSensor,
+  );
+}
+
 export const list = householdQuery({
   args: {},
   returns: v.array(unitPublicValidator),
   handler: async (ctx) => {
     const units = await ctx.db.query("units").withIndex("by_name").take(50);
     const result = [];
+    const now = Date.now();
     for (const unit of units) {
-      const pending = await ctx.db
-        .query("commands")
-        .withIndex("by_unit_and_status", (q) =>
-          q.eq("unitId", unit._id).eq("status", "queued"),
-        )
-        .take(20);
-      const remoteSensor = await remoteSensorForUnit(ctx, unit._id);
-      result.push(toPublicUnit(unit, pending.length, remoteSensor));
+      result.push(await publicUnitWithPending(ctx, unit, now));
     }
     return result;
   },
@@ -67,14 +82,7 @@ export const get = householdQuery({
     if (!unit) {
       return null;
     }
-    const pending = await ctx.db
-      .query("commands")
-      .withIndex("by_unit_and_status", (q) =>
-        q.eq("unitId", unit._id).eq("status", "queued"),
-      )
-      .take(20);
-    const remoteSensor = await remoteSensorForUnit(ctx, unit._id);
-    return toPublicUnit(unit, pending.length, remoteSensor);
+    return await publicUnitWithPending(ctx, unit, Date.now());
   },
 });
 
@@ -215,19 +223,12 @@ export const remove = householdMutation({
     for (const reading of readings) {
       await ctx.db.delete("readings", reading._id);
     }
-    const queued = await ctx.db
+    // Every status, now that confirmed commands are kept as acked/expired.
+    const commands = await ctx.db
       .query("commands")
-      .withIndex("by_unit_and_status", (q) =>
-        q.eq("unitId", args.unitId).eq("status", "queued"),
-      )
-      .take(50);
-    const sent = await ctx.db
-      .query("commands")
-      .withIndex("by_unit_and_status", (q) =>
-        q.eq("unitId", args.unitId).eq("status", "sent"),
-      )
-      .take(50);
-    for (const command of [...queued, ...sent]) {
+      .withIndex("by_unit_and_status", (q) => q.eq("unitId", args.unitId))
+      .take(200);
+    for (const command of commands) {
       await ctx.db.delete("commands", command._id);
     }
     const remoteSensor = await remoteSensorForUnit(ctx, args.unitId);
@@ -348,27 +349,63 @@ export const applyReportedState = internalMutation({
     // can differ from the dashboard slug (e.g. mil-suite vs mother-in-law-s-suite).
 
     const now = Date.now();
-    // The ESP posts state before it polls commands, so a report can still carry
-    // the old value for anything queued. Keep the dashboard's value until the
-    // command reaches the unit, or the next tap steps from a stale setpoint.
-    const queued = await ctx.db
-      .query("commands")
-      .withIndex("by_unit_and_status", (q) =>
-        q.eq("unitId", unit._id).eq("status", "queued"),
-      )
-      .take(50);
-    const holdMode = queued.some((command) => command.mode !== undefined);
-    const holdFan = queued.some((command) => command.fanMode !== undefined);
-    const holdTarget = queued.some(
-      (command) => command.targetTempC !== undefined,
-    );
+    const reportedMode = parseClimateMode(args.mode);
+    const reportedFan = parseFanMode(args.fanMode);
 
-    const mode = holdMode
+    // A report can predate a command: it was queued after the unit last
+    // polled, or the unit took it but hasn't applied it yet. Until the unit
+    // reports the commanded value, keep the dashboard's value so the control
+    // doesn't flip back and the next tap doesn't step from a stale setpoint.
+    const { queued, liveSent, staleSent } = await loadOpenCommands(
+      ctx,
+      unit._id,
+      now,
+    );
+    for (const command of staleSent) {
+      await ctx.db.patch("commands", command._id, { status: "expired" });
+    }
+    const reportedMatches = (
+      command: Doc<"commands">,
+      field: CommandField,
+    ) => {
+      switch (field) {
+        case "mode":
+          return reportedMode === command.mode;
+        case "fanMode":
+          return reportedFan === command.fanMode;
+        case "targetTempC":
+          return (
+            args.targetTempC !== undefined &&
+            command.targetTempC !== undefined &&
+            Math.abs(args.targetTempC - command.targetTempC) < 0.3
+          );
+      }
+    };
+    // Fields set by a newer command. Queued ones are always newer than sent.
+    const claimed = new Set<CommandField>(queued.flatMap(commandFields));
+    const held = new Set<CommandField>(claimed);
+    for (const command of liveSent) {
+      const fields = commandFields(command).filter((f) => !claimed.has(f));
+      for (const field of commandFields(command)) claimed.add(field);
+      if (fields.length === 0) {
+        await ctx.db.patch("commands", command._id, { status: "superseded" });
+      } else if (fields.every((f) => reportedMatches(command, f))) {
+        await ctx.db.patch("commands", command._id, {
+          status: "acked",
+          ackedAt: now,
+        });
+      } else {
+        for (const field of fields) held.add(field);
+      }
+    }
+    const holdTarget = held.has("targetTempC");
+
+    const mode = held.has("mode")
       ? unit.mode
-      : (parseClimateMode(args.mode) ?? unit.mode);
-    const fanMode = holdFan
+      : (reportedMode ?? unit.mode);
+    const fanMode = held.has("fanMode")
       ? unit.fanMode
-      : (parseFanMode(args.fanMode) ?? unit.fanMode);
+      : (reportedFan ?? unit.fanMode);
     const hvacAction = parseHvacAction(args.hvacAction) ?? unit.hvacAction;
 
     const reportedPatch: {
